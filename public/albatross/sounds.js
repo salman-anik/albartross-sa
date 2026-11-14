@@ -43,22 +43,6 @@
 //   ffmpeg -i in.mp3 -ss <start> -to <end> -c:a libmp3lame -b:a 160k out.mp3
 import * as THREE from "three";
 
-const RELAXING_MUSIC_TRACKS = [
-  "sounds/bgm.mp3",
-  "sounds/bgm-floating-cities.mp3",
-  "sounds/bgm-clean-soul.mp3",
-  "sounds/bgm-air-prelude.mp3",
-  "sounds/bgm-almost-in-f.mp3",
-  "sounds/bgm-deep-haze.mp3",
-];
-
-function pickRandomTrack(excludeFile = null) {
-  const pool = excludeFile && RELAXING_MUSIC_TRACKS.length > 1
-    ? RELAXING_MUSIC_TRACKS.filter((f) => f !== excludeFile)
-    : RELAXING_MUSIC_TRACKS;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
 export const SOUND = {
   volume: 0.8, // the master, 0 – 1
   music: {
@@ -331,7 +315,7 @@ export class Sounds {
       if (!document.hidden) resumeVisibleAudio();
     });
     // Audio can only start from a gesture
-    this.musicTrack = pickRandomTrack();
+    this.musicTrack = SOUND.music.file;
     const start = () => this.start();
     if (!PHONE) {
       addEventListener("pointerdown", start, { once: true });
@@ -407,12 +391,8 @@ export class Sounds {
     };
     if (SOUND.music.file && !this.music) {
       const M = SOUND.music;
-      const track = this.musicTrack ?? pickRandomTrack();
-      this.musicTrack = track;
-      const tag = this.musicTag ?? new Audio(track);
-      this.music = stream(track, 0, this.main, tag); // (not through the sfx bus; a phone's fetched early)
-      this.music.tag.loop = false;
-      this.music.tag.addEventListener("ended", () => this.nextMusic());
+      const tag = this.musicTag ?? new Audio(M.file);
+      this.music = stream(M.file, 0, this.main, tag); // (not through the sfx bus; a phone's fetched early)
       this.music.gain.gain.linearRampToValueAtTime(M.gain, ctx.currentTime + M.fadeIn);
       if ((this.musicOn ?? true) && !document.hidden) this.music.tag.play().catch(() => {});
     }
@@ -466,22 +446,6 @@ export class Sounds {
         }
       }),
     );
-  }
-  nextMusic() {
-    this.musicOn = true;
-    const musicBox = document.getElementById("music-on");
-    if (musicBox && !musicBox.checked) musicBox.checked = true;
-    this.musicTrack = pickRandomTrack(this.musicTrack);
-    if (!this.ctx) {
-      this.start();
-      return;
-    }
-    if (this.ctx.state === "suspended" && !document.hidden) this.ctx.resume().catch(() => {});
-    if (this.music) {
-      this.music.tag.src = this.musicTrack;
-      this.music.tag.currentTime = 0;
-      if (!document.hidden) this.music.tag.play().catch(() => {});
-    }
   }
   mute(on) {
     this.muted = on;
