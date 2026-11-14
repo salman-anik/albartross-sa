@@ -60,7 +60,7 @@ export class SkyFlocks {
     this.companion = {
       idx: 0,
       state: "idle",
-      until: 8 + rand() * 12,
+      until: 300,
       side: 1,
       lateral: 4.5,
       fore: -1.2,
@@ -105,13 +105,13 @@ export class SkyFlocks {
         );
         comp.yaw = heading;
         comp.state = "fly";
-        comp.until = time + 18 + Math.random() * 16;
+        comp.until = time + 20;
       } else if (comp.state === "fly") {
         comp.state = "leave";
         comp.until = time + 5.5;
       } else {
         comp.state = "idle";
-        comp.until = time + 16 + Math.random() * 20;
+        comp.until = time + 300;
       }
     }
     for (let i = 0; i < this.density; i++) {
