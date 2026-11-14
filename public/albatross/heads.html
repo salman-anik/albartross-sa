@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Head Field — Heads</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/addons/": "./vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="lab">
+  <nav id="tabs"><a href="index.html">Field</a><a class="active" href="heads.html">Heads</a><a href="pillars.html">Pillars</a><a href="obelisks.html">Obelisks</a><a href="trees.html">Trees</a><a href="albatross.html">Albatross</a><a href="scene.html">Scene</a></nav>
+  <div id="lab"></div>
+  <script type="module">
+    import { mountLab } from "./heads.js";
+    import { VARIANTS, VARIETY, variantParams } from "./statues.js";
+    // The "field" fill shows the heads the field stands up, from statues.js
+    mountLab(document.getElementById("lab"), {
+      field: { count: VARIANTS, params: variantParams, variety: VARIETY },
+    });
+  </script>
+</body>
+</html>
+

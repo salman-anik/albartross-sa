@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Head Field — Pillars</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/addons/": "./vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="lab">
+  <nav id="tabs"><a href="index.html">Field</a><a href="heads.html">Heads</a><a class="active" href="pillars.html">Pillars</a><a href="obelisks.html">Obelisks</a><a href="trees.html">Trees</a><a href="albatross.html">Albatross</a><a href="scene.html">Scene</a></nav>
+  <div id="lab"></div>
+  <script type="module">
+    import { mountPillarLab } from "./pillars.js";
+    mountPillarLab(document.getElementById("lab"));
+  </script>
+</body>
+</html>
+

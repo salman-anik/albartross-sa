@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Albatross</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <!-- What a shared link shows: the words, and a view of the field (og.jpg) -->
+    <meta name="description" content="A lone albatross makes first contact with a strange place." />
+    <meta property="og:title" content="The Albatross" />
+    <meta property="og:description" content="A lone albatross makes first contact with a strange place." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://anokhee.dev/albatross/" />
+    <meta property="og:image" content="https://anokhee.dev/albatross/og.jpg" />
+    <meta property="og:image:width" content="1198" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="An albatross flying over a misty green island of stone pillars and giant stone heads" />
+    <meta name="twitter:card" content="summary_large_image" />
+    
+    
+    <link href="fonts/google.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <!-- The loading screen: up before the module runs, down on "fly" -->
+    <div id="loading">
+      <!-- The stars: scattered by the script below, behind the clouds -->
+      <div class="stars" aria-hidden="true"></div>
+      <!-- Clouds far under the bird, in line, drifting down the screen as it
+           flies up it: three layers, the nearer bigger and faster (style.css) -->
+      <div class="clouds" aria-hidden="true"><i class="far"><b></b></i><i class="mid"><b></b></i><i class="near"><b></b></i></div>
+      <!-- The title, over the bird -->
+      <h1>The Albatross</h1>
+      <!-- The bird, from above, in line: the field's albatross seen straight
+           down, head up the screen, the same proportions as the model (long
+           narrow wings, a seam where the dark outer third begins, a slim body,
+           a short fan of a tail, the long beak). One wing is drawn and
+           mirrored for the other; each shape is filled with the night, so the
+           lines under it (the wings' roots, the clouds) are hidden -->
+      <svg class="bird" viewBox="-240 -100 480 220" aria-hidden="true">
+        <defs>
+          <path id="wing" d="M 10,-32 C 70,-42 160,-30 232,-4 C 236,0 237,6 232,10 C 180,8 130,8 100,14 C 60,20 28,14 10,6 Z" />
+          <clipPath id="wing-in"><use href="#wing" /></clipPath>
+        </defs>
+        <g class="pilot">
+        <g class="wing" style="transform-origin: 10px -14px">
+          <use href="#wing" class="feather" /><line class="seam" x1="150" y1="-60" x2="150" y2="60" clip-path="url(#wing-in)" />
+        </g>
+        <g transform="scale(-1 1)">
+          <g class="wing" style="transform-origin: 10px -14px">
+            <use href="#wing" class="feather" /><line class="seam" x1="150" y1="-60" x2="150" y2="60" clip-path="url(#wing-in)" />
+          </g>
+        </g>
+        <path class="feather" d="M 4,70 C 10,78 15,95 15,106 C 8,110 -8,110 -15,106 C -15,95 -10,78 -4,70 Z" />
+        <path class="feather" d="M 0,-66 C 8,-66 11,-56 10,-48 C 15,-40 17,-20 15,0 C 13,30 8,55 4,72 L -4,72 C -8,55 -13,30 -15,0 C -17,-20 -15,-40 -10,-48 C -11,-56 -8,-66 0,-66 Z" />
+        <path class="beak" d="M 3,-62 C 3,-75 1.5,-88 0,-96 C -1.5,-88 -3,-75 -3,-62 Z" />
+        </g>
+      </svg>
+      <!-- The bird's thoughts while the field is built, one after another
+           (main.field.js LOADING_LINES), between the title and the bar -->
+      <p id="loading-line" class="loading-line" aria-live="polite">The wind is steady.</p>
+      <!-- What is being built, as a bar: the settings' bars (the weather, the
+           time of day), filled as far as the field is built (main.field.js
+           loading); built, it says "Play" and is the button that starts the flight -->
+      <div class="bar-wrap loading-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100">
+        <div class="bar-fill"></div><span id="loading-status" class="bar-name"></span><output id="loading-pct" class="bar-value"></output>
+      </div>
+      <!-- The keys, under the bar: the four arrows drawn as keycaps, in line;
+           on a touch screen, which has none, the drag instead (style.css) -->
+      <p class="keys keys-mouse">
+        <svg class="arrows" viewBox="0 0 31 21" aria-label="arrow keys" role="img">
+          <rect x="11" y="0.5" width="9" height="9" rx="1.5" /><rect x="0.5" y="11.5" width="9" height="9" rx="1.5" /><rect x="11" y="11.5" width="9" height="9" rx="1.5" /><rect x="21.5" y="11.5" width="9" height="9" rx="1.5" />
+          <path d="M 13.5,6 15.5,3.5 17.5,6 M 6.5,14 4,16 6.5,18 M 13.5,15 15.5,17.5 17.5,15 M 24.5,14 27,16 24.5,18" />
+        </svg>
+        <span>or WASD to fly</span><span aria-hidden="true">•</span><span>hold Space to speed up</span><span aria-hidden="true">•</span><span>M to mute</span>
+      </p>
+      <p class="keys keys-touch">Drag to fly</p>
+      <!-- The byline, at the foot of the screen: goes with it on "fly" -->
+      <div class="foot">
+        <p class="byline">Created by <a href="https://anokhee.dev" target="_blank" rel="noopener">Anokhee Jandhyala</a> · upgraded by <a href="https://salmananik.vercel.app/" target="_blank" rel="noopener">Salman Anik</a></p>
+      </div>
+    </div>
+    <!-- The arrows (or WASD), or dragging the bird, steer it: it stays where it
+         is, leaning into the turn, and the clouds slide past the other way,
+         the nearer faster; up and down make it fly faster or slower. Here,
+         not in main.field.js, so it answers while the field is still loading -->
+    <script>
+      {
+        const loading = document.getElementById("loading");
+        const bird = loading.querySelector(".bird"),
+          pilot = bird.querySelector(".pilot");
+
+        // While the field's code is still being fetched (the bird's first thoughts,
+        // long on a slow connection) the bar creeps on its own: 5% by a
+        // second, then ever slower toward 15%. Once main.field.js runs, it
+        // takes the bar over from wherever this left it
+        {
+          const bar = loading.querySelector(".loading-bar"),
+            pct = document.getElementById("loading-pct"),
+            t0 = performance.now();
+          const creep = setInterval(() => {
+            if (loading.hasAttribute("data-woke")) return clearInterval(creep); // the field has taken over
+            const t = (performance.now() - t0) / 1000,
+              p = Math.round(t < 1 ? t * 5 : 5 + 10 * (1 - Math.exp(-(t - 1) / 8)));
+            bar.style.setProperty("--p", `${p}%`);
+            pct.textContent = `${p}%`;
+          }, 200);
+        }
+
+        // The stars: many, most faint and small, a few bright; a third of them
+        // twinkle, each at its own pace. Seeded, so the sky is the same each visit
+        {
+          let s = 11;
+          const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+          const sky = loading.querySelector(".stars");
+          for (let k = 0; k < 90; k++) {
+            const star = document.createElement("i"),
+              big = rnd() < 0.08;
+            star.style.cssText = `left:${(rnd() * 100).toFixed(2)}%;top:${(rnd() * 100).toFixed(2)}%;--s:${big ? 2.2 : 1 + rnd()}px;--o:${(big ? 0.85 : 0.2 + rnd() * 0.4).toFixed(2)}`;
+            if (rnd() < 0.33) star.style.animation = `twinkle ${(2.5 + rnd() * 4).toFixed(1)}s ${(-rnd() * 6).toFixed(1)}s ease-in-out infinite`;
+            sky.append(star);
+          }
+        }
+
+        // The clouds: one tile of line clouds, each a few overlapping circles,
+        // stroked, then filled with the night, so only the outline of the whole
+        // shows. Each cloud squashed a little about its middle, so its bumps
+        // are shallow arcs rather than round puffs. The stroke is set so it
+        // comes out about as fine on every layer, however big its tile
+        const CLOUDS = [
+          [[90, 150, 38], [130, 125, 45], [175, 145, 36], [150, 170, 32], [105, 172, 30]],
+          [[380, 270, 30], [415, 245, 42], [460, 255, 38], [490, 280, 28], [440, 290, 34]],
+          [[190, 455, 26], [225, 430, 36], [265, 445, 32], [240, 475, 28]],
+          [[505, 525, 20], [530, 510, 26], [552, 528, 18]],
+        ];
+        const SQUASH = 0.7; // how tall a cloud is, of the circles it was drawn from
+        const all = CLOUDS.map((c) => {
+          const mx = c.reduce((s, [x]) => s + x, 0) / c.length,
+            my = c.reduce((s, [, y]) => s + y, 0) / c.length;
+          return `<g transform='translate(${mx} ${my}) scale(1 ${SQUASH}) translate(${-mx} ${-my})'>${c.map(([x, y, r]) => `<circle cx='${x}' cy='${y}' r='${r}'/>`).join("")}</g>`;
+        }).join("");
+        const lines = (tile) =>
+          `url("data:image/svg+xml,${encodeURIComponent(
+            `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'>` +
+              `<g fill='none' stroke='#e0dac9' stroke-width='${((1.4 * 600) / tile).toFixed(2)}' vector-effect='non-scaling-stroke'>${all}</g>` +
+              `<g fill='#0e1118'>${all}</g></svg>`,
+          )}")`;
+        // Each layer slides across (its <i>) and down (its <b>) a tile at a
+        // time, looping; steering sets only how fast, so it stays on the compositor
+        const layers = [...loading.querySelectorAll(".clouds i")].map((i, n) => {
+          const b = i.firstElementChild,
+            css = getComputedStyle(i),
+            tile = parseFloat(css.getPropertyValue("--tile")),
+            ms = parseFloat(css.getPropertyValue("--t")) * 1000;
+          b.style.setProperty("--cloud", lines(tile));
+          const loop = (el, axis) => {
+            const a = el.animate([{ transform: `translate${axis}(0)` }, { transform: `translate${axis}(${tile}px)` }], { duration: ms, iterations: Infinity });
+            a.currentTime = Math.random() * ms; // each layer starts somewhere of its own
+            return a;
+          };
+          return { across: loop(i, "X"), down: loop(b, "Y") };
+        });
+
+        // What is asked: the keys held, or the drag (from where it began)
+        const held = {};
+        const KEYS = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down" };
+        // Caught before main.field.js hears them (its any-key "fly", its own
+        // steering): on the loading screen the arrows steer this bird instead
+        addEventListener(
+          "keydown",
+          (e) => {
+            const k = KEYS[e.code];
+            if (!k || loading.classList.contains("gone")) return;
+            held[k] = true;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          },
+          true,
+        );
+        addEventListener("keyup", (e) => KEYS[e.code] && (held[KEYS[e.code]] = false), true);
+        addEventListener("blur", () => Object.keys(held).forEach((k) => (held[k] = false)));
+        let drag = null;
+        bird.addEventListener("pointerdown", (e) => {
+          drag = { x: e.clientX, y: e.clientY, steer: 0, pace: 1 };
+          bird.setPointerCapture(e.pointerId);
+        });
+        bird.addEventListener("pointermove", (e) => {
+          if (!drag) return;
+          const dx = e.clientX - drag.x,
+            dy = e.clientY - drag.y;
+          drag.steer = Math.max(-1, Math.min(1, dx / 140));
+          drag.pace = Math.max(0.6, Math.min(1.6, 1 - dy / 200)); // drawn up the screen, faster
+        });
+        const letGo = () => (drag = null);
+        bird.addEventListener("pointerup", letGo);
+        bird.addEventListener("pointercancel", letGo);
+
+        // Eased toward what is asked: the bird leans into the turn and edges
+        // a little that way; the clouds slide the other way and faster or slower
+        // With "reduce motion" asked for (the system's setting), the clouds
+        // hold still until the bird is steered, which moves them only as asked
+        const rest = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1;
+        for (const l of layers) l.down.playbackRate = rest;
+        let steer = 0,
+          pace = rest,
+          last = performance.now();
+        const shown = { steer: 0, pace: rest };
+        const fly = (now) => {
+          if (!loading.isConnected) return; // flown: the screen is gone
+          const dt = Math.min(0.1, (now - last) / 1000);
+          last = now;
+          const wantSteer = drag ? drag.steer : (held.right ? 1 : 0) - (held.left ? 1 : 0),
+            wantPace = Math.max(0, rest + (drag ? drag.pace - 1 : (held.up ? 0.6 : 0) - (held.down ? 0.4 : 0))),
+            ease = 1 - Math.exp(-dt * 1.5);
+          steer += (wantSteer - steer) * ease;
+          pace += (wantPace - pace) * ease;
+          // Only when it has moved: a new rate hands the slide back to the
+          // compositor afresh, so it is left alone once settled
+          if (Math.abs(steer - shown.steer) > 0.002 || Math.abs(pace - shown.pace) > 0.002) {
+            shown.steer = steer;
+            shown.pace = pace;
+            pilot.setAttribute("transform", `translate(${(steer * 16).toFixed(2)} ${(-(pace - rest) * 8).toFixed(2)}) rotate(${(steer * 10).toFixed(2)} 0 4)`);
+            for (const l of layers) {
+              l.across.playbackRate = -steer * 0.5;
+              l.down.playbackRate = pace;
+            }
+          }
+          requestAnimationFrame(fly);
+        };
+        requestAnimationFrame(fly);
+      }
+    </script>
+    <nav id="tabs">
+      <a class="active" href="index.html">Field</a><a href="heads.html">Heads</a
+      ><a href="pillars.html">Pillars</a><a href="obelisks.html">Obelisks</a><a href="trees.html">Trees</a><a href="albatross.html">Albatross</a><a href="scene.html">Scene</a>
+    </nav>
+    <aside id="mini-map-panel" aria-label="Nearby world map">
+      <canvas id="mini-map" width="200" height="200" aria-label="Rotating map of nearby islands, rivers, and waterfalls"></canvas>
+    </aside>
+    <!-- The settings: one small button at the top right; the day, the
+         music, the weather and the credits only when it is opened -->
+    <div id="settings">
+      <div class="settings-buttons">
+        <button id="settings-toggle" class="pop-toggle" aria-expanded="false" aria-controls="settings-panel" title="the weather, the time of day, and the rest"><span id="wx-mini" aria-hidden="true">☀</span><b id="wx-mini-name">clear</b><i id="wx-mini-time"></i></button>
+        <button id="credits-toggle" class="pop-toggle" aria-expanded="false" aria-controls="credits-panel" title="low battery mode, the music and the sound, and who made them"
+          ><span class="cd" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M10.3 2.5h3.4l.5 2.6a7.6 7.6 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a7.7 7.7 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.6 7.6 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.6 7.6 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a7.7 7.7 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.6 7.6 0 0 1 1.9-1.1z" /><circle cx="12" cy="12" r="3" /></svg></span
+          >Settings</button>
+      </div>
+      <div id="settings-panel" hidden>
+        <div class="panel-head">
+          <h2 class="settings-title">Forecast</h2>
+        </div>
+        <div class="setting weather-now">
+          <!-- As a weather app has it, in a box: the weather now on the left
+               (its icon, its name, how long is left of it), a line, and what
+               comes next on the right (its icon, its name, how soon) -->
+          <div class="wx">
+            <div class="wx-col">
+              <span class="wx-label">Current</span>
+              <div id="wx-icon" class="wx-icon" aria-hidden="true"></div>
+              <div class="wx-line"><b id="weather-out"></b><span class="wx-dot">·</span><span id="wx-left"></span></div>
+            </div>
+            <div class="wx-divider" aria-hidden="true"></div>
+            <div class="wx-col wx-col-next">
+              <span id="wx-next-label" class="wx-label">Next</span>
+              <div id="wx-next-icon" class="wx-icon" aria-hidden="true"></div>
+              <div class="wx-line"><b id="wx-next-name"></b><span class="wx-dot">·</span><span id="wx-next-when"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="presets">
+          <span class="wx-label">Presets</span>
+          <div id="weather-chips" class="chips" aria-label="weather presets"></div>
+        </div>
+        <!-- Each slider a bar with its name and what it is set to inside it,
+             on the left and the right, over a soft fill (main.field.js
+             paintSettings); the real slider lies over it, unseen -->
+        <div id="daynight" class="setting">
+          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">time of day</span><output id="daylight-out" class="bar-value"></output><input id="daylight" class="bar" type="range" min="0" max="1" step="0.01" value="0" aria-label="time of day" /></div>
+        </div>
+        <div id="rain" class="setting">
+          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">rain</span><output id="rain-out" class="bar-value"></output><input id="rain-level" class="bar" type="range" min="0" max="1" step="0.01" value="0" aria-label="rain" /></div>
+        </div>
+        <div id="snow" class="setting">
+          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">snow</span><output id="snow-out" class="bar-value"></output><input id="snow-level" class="bar" type="range" min="0" max="1" step="0.01" value="0" aria-label="snow" /></div>
+        </div>
+        <div id="wind" class="setting">
+          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">wind</span><output id="wind-out" class="bar-value"></output><input id="wind-level" class="bar" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="wind" /></div>
+        </div>
+        <div id="wind-way" class="setting" title="which way the wind blows (the arrow: as seen from here)">
+          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">direction</span><output id="dir-out" class="bar-value"><span id="dir-num"></span><b id="wind-arrow" aria-hidden="true">↑</b></output><input id="wind-dir" class="bar" type="range" min="0" max="359" step="1" value="60" aria-label="wind direction" /></div>
+        </div>
+      </div>
+      <div id="credits-panel" class="popover" hidden>
+        <div class="setting-switches">
+          <label class="switch" title="on a low battery, ease the resolution down a little when the frames slow; off, always full resolution"
+            ><input id="low-battery-on" type="checkbox" /><span>low battery mode</span></label
+          >
+          <label class="switch"><input id="music-on" type="checkbox" checked /><span>music</span></label>
+          <label class="switch"><input id="sfx-on" type="checkbox" checked /><span>sfx</span></label>
+          <label id="dev-switch" class="switch" title="the tabs to the labs: the heads, the pillars, the trees and the rest"><input id="dev-on" type="checkbox" /><span>dev tools</span></label>
+        </div>
+        <label class="graphics-setting">Graphics
+          <select id="graphics-quality" aria-label="Graphics quality">
+            <option value="low" selected>Low</option><option value="medium">Medium</option><option value="high">High</option><option value="ultra">Ultra</option>
+          </select>
+        </label>
+        <div class="credits-cols">
+          <section class="credits-col">
+            <h2 class="settings-title credits-head"><span class="head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /><path d="M14.5 5.5l3 3" /></svg></span>Created by</h2>
+            <p class="credits-text"><a href="https://anokhee.dev" target="_blank" rel="noopener">Anokhee Jandhyala</a></p>
+            <p class="credits-text">Upgraded by <a href="https://salmananik.vercel.app/" target="_blank" rel="noopener">Salman Anik</a></p>
+          </section>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="main.field.js"></script>
+  </body>
+</html>
+

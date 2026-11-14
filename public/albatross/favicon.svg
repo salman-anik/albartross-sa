@@ -1,0 +1,13 @@
+<!-- The tab's icon: the loading screen's bird (index.html), from above, as
+     one filled shape; dark ink on a light browser, the cream on a dark one -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-240 -235 480 480">
+  <style>
+    path { fill: #1b2440; }
+    @media (prefers-color-scheme: dark) { path { fill: #e0dac9; } }
+  </style>
+  <path d="M 10,-32 C 70,-42 160,-30 232,-4 C 236,0 237,6 232,10 C 180,8 130,8 100,14 C 60,20 28,14 10,6 Z" />
+  <path transform="scale(-1 1)" d="M 10,-32 C 70,-42 160,-30 232,-4 C 236,0 237,6 232,10 C 180,8 130,8 100,14 C 60,20 28,14 10,6 Z" />
+  <path d="M 4,70 C 10,78 15,95 15,106 C 8,110 -8,110 -15,106 C -15,95 -10,78 -4,70 Z" />
+  <path d="M 0,-66 C 8,-66 11,-56 10,-48 C 15,-40 17,-20 15,0 C 13,30 8,55 4,72 L -4,72 C -8,55 -13,30 -15,0 C -17,-20 -15,-40 -10,-48 C -11,-56 -8,-66 0,-66 Z" />
+  <path d="M 3,-62 C 3,-75 1.5,-88 0,-96 C -1.5,-88 -3,-75 -3,-62 Z" />
+</svg>

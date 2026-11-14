@@ -1,0 +1,487 @@
+:root { --ui: "Space Grotesk", "Inter", "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif; } /* the field and its loading screen; index.html loads Space Grotesk */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0e1118; }
+canvas { display: block; cursor: grab; }
+canvas:active { cursor: grabbing; }
+/* The settings: a small button at the top right, and under it, only once
+   it is opened, a panel: the time of day and the weather as filled bars,
+   each with its name over it and what it is set to beside the name, then
+   the switches, the music, and the credits */
+#settings {
+  --ink: #c9cfdd; --mute: #7d879e; --fill: #e6dfcc; --track: rgba(230, 223, 204, 0.1);
+  --h: 20px; /* the bars, the switches and the chips: one height (was 16) */
+  position: fixed; top: 12px; right: 12px; z-index: 10;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  font: 13px/1.2 var(--ui); color: var(--ink);
+}
+/* The buttons that open them, side by side */
+.settings-buttons { display: flex; gap: 6px; }
+.pop-toggle {
+  display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 10px; border: 0; border-radius: 4.5px;
+  background: rgba(10, 14, 28, 0.55); color: var(--ink); font: 13px/1 var(--ui); letter-spacing: 0.02em; cursor: pointer;
+  opacity: 0.6; transition: opacity 0.2s ease, background 0.2s ease;
+}
+.pop-toggle:hover, .pop-toggle:focus-visible, .pop-toggle[aria-expanded="true"] { opacity: 1; background: rgba(10, 14, 28, 0.8); }
+#settings-toggle span { display: block; width: 18px; height: 18px; font-size: 16px; line-height: 18px; color: var(--fill); }
+#settings-toggle span svg { display: block; width: 100%; height: 100%; }
+#settings-toggle b { font-weight: 500; text-transform: capitalize; }
+#credits-toggle .cd { display: block; width: 18px; height: 18px; color: var(--fill); }
+#credits-toggle .cd svg { display: block; width: 100%; height: 100%; }
+#settings-toggle i { font-style: normal; color: var(--mute); font-variant-numeric: tabular-nums; }
+#settings-panel, #credits-panel {
+  display: flex; flex-direction: column; gap: 14px; width: 248px; max-width: calc(100vw - 24px);
+  padding: 16px 16px 14px; border-radius: 7px;
+  background: rgba(12, 16, 30, 0.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(230, 223, 204, 0.08);
+}
+#settings-panel[hidden], #credits-panel[hidden] { display: none; }
+
+/* The panel's title, left aligned over it all */
+.settings-title { margin: 0 0 -2px; font: 500 15px/1.2 var(--ui); letter-spacing: 0.02em; color: var(--ink); text-align: left; }
+
+/* The panel's head: its title on the left, the auto switch on the right */
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid rgba(230, 223, 204, 0.12); } /* a rule under the head */
+.panel-head .settings-title { margin: 0; }
+.panel-head .switch { gap: 8px; color: var(--mute); }
+
+/* A setting: its name and value on a line, the bar under it */
+.setting { display: flex; flex-direction: column; gap: 6px; }
+#settings-panel .setting + .setting { margin-top: -8px; } /* the bars close together, a group */
+.setting-head { display: flex; justify-content: space-between; align-items: baseline; letter-spacing: 0.02em; cursor: pointer; }
+.setting-head span { color: var(--ink); }
+.setting-head output { color: var(--mute); font-variant-numeric: tabular-nums; }
+#wind-arrow { display: inline-block; margin-left: 6px; color: var(--fill); font-weight: 400; } /* (no transition: it turns every frame, and an eased turn spun the long way round at north) */
+
+/* The bar: drawn here, not by the browser (its own slider drew taller in
+   some). A flat rounded box, filled from the left as far as it is set (--p,
+   set on the box as it moves), a slim white line at the fill's edge; the
+   real slider lies over it all, unseen, and does the dragging, the clicks
+   and the keys */
+.bar-wrap {
+  --p: 0%;
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 28px; padding: 0 10px; border-radius: 4px; overflow: hidden;
+  background: var(--track); cursor: pointer; font-size: 12px;
+}
+/* the fill soft (a warm tint, not the solid colour) so the words read over it and past it */
+.bar-fill { position: absolute; top: 0; bottom: 0; left: 0; width: var(--p); background: rgba(230, 223, 204, 0.26); pointer-events: none; }
+.bar-name, .bar-value { position: relative; pointer-events: none; white-space: nowrap; }
+.bar-name { color: var(--ink); }
+.bar-value { color: var(--mute); font-variant-numeric: tabular-nums; }
+.bar-fill::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 2px; background: #fff; }
+.bar-wrap:hover .bar-fill { filter: brightness(1.06); }
+.bar-wrap:focus-within { outline: 2px solid rgba(230, 223, 204, 0.6); outline-offset: 2px; }
+.bar {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+  opacity: 0; cursor: pointer; -webkit-appearance: none; appearance: none;
+}
+/* (its unseen handle as thin as the drawn line, so a click lands where the fill will end) */
+.bar::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 2px; height: var(--h); }
+.bar::-moz-range-thumb { width: 2px; height: var(--h); border: 0; }
+
+/* The weather now, what comes next, and the presets as chips */
+.weather-now { }
+.wx { display: flex; align-items: stretch; gap: 12px; padding: 12px 10px; border: 1px solid rgba(230, 223, 204, 0.28); border-radius: 6px; }
+.wx-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.wx-col-next { opacity: 0.75; transition: opacity 0.3s ease; }
+.wx-col-next.off { opacity: 0.65; } /* paused: nothing comes next (the words still readable, for the hint) */
+.wx-col-next.off .wx-icon { opacity: 0.45; }
+.wx-label { color: var(--mute); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.wx-icon { width: 52px; height: 52px; color: var(--fill); }
+.wx-icon svg { display: block; width: 100%; height: 100%; }
+/* Custom weather: the nearest preset's icon, but sketched (dashed, softer), a guess rather than a forecast */
+.wx-icon.vague, #wx-mini.vague { opacity: 0.6; }
+.wx-icon.vague svg *, #wx-mini.vague svg * { stroke-dasharray: 2.5 4; }
+.wx-line { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--mute); } /* the name, then the time under it */
+.wx-dot { display: none; }
+.wx-line b { color: var(--ink); font-size: 13px; font-weight: 500; text-transform: capitalize; }
+.wx-divider { flex: none; width: 1px; background: rgba(230, 223, 204, 0.18); }
+.presets { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; } /* a small heading, then the chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button {
+  display: flex; align-items: center; padding: 7px 7px; border: 0; border-radius: 4px; background: var(--track); /* room above and below the name (about 28 tall), less to either side */
+  color: var(--ink); font: 11.5px/1.2 var(--ui); cursor: pointer; transition: background 0.2s ease, color 0.2s ease;
+}
+.chips button:hover { background: rgba(230, 223, 204, 0.18); }
+.chips button.on { background: var(--fill); color: #141a2c; }
+.chips button:focus-visible { outline: 2px solid rgba(230, 223, 204, 0.6); outline-offset: 2px; }
+
+/* The switches and the music: a row of small toggles */
+.setting-switches { display: flex; flex-direction: column; gap: 12px; padding-top: 2px; }
+.switch { display: flex; align-items: center; gap: 12px; cursor: pointer; color: var(--ink); }
+.switch input {
+  -webkit-appearance: none; appearance: none; flex: none; position: relative; width: calc(var(--h) * 1.7); height: var(--h); margin: 0;
+  border-radius: 4.5px; background: var(--track); cursor: pointer; transition: background 0.2s ease;
+}
+.switch input::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--h) - 6px); height: calc(var(--h) - 6px); border-radius: 2px;
+  background: var(--mute); transition: transform 0.2s ease, background 0.2s ease;
+}
+.switch input:checked { background: rgba(230, 223, 204, 0.35); }
+.switch input:checked::before { transform: translateX(calc(var(--h) * 0.7)); background: #fff; }
+.switch input:focus-visible { outline: 2px solid rgba(230, 223, 204, 0.6); outline-offset: 2px; }
+
+#credits-panel .credits-text { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.6; } /* as the sound's names */
+#credits-panel em { color: var(--ink); }
+#credits-panel .credits-text a { color: inherit; text-decoration: underline; text-decoration-color: rgba(230, 223, 204, 0.35); text-underline-offset: 3px; transition: text-decoration-color 0.25s; } /* the maker, linked to anokhee.dev */
+#credits-panel .credits-text a:hover { text-decoration-color: currentColor; }
+/* The credits under the switches, the music over the sound; the sound's
+   names in two columns */
+#credits-panel { width: 300px; }
+.credits-cols { display: flex; flex-direction: column; gap: 16px; padding-top: 14px; border-top: 1px solid rgba(230, 223, 204, 0.1); }
+.credits-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.credits-col .settings-title { margin: 0; }
+.credits-head { display: flex; align-items: center; gap: 7px; }
+.head-icon { display: block; width: 16px; height: 16px; color: var(--fill); }
+.head-icon svg { display: block; width: 100%; height: 100%; }
+#credits-panel .credits-sub { margin: 0 0 4px; color: var(--mute); font-size: 11px; letter-spacing: 0.04em; }
+#credits-panel .credits-keys { margin: 10px 0 0; color: var(--mute); font-size: 12px; } /* the controls (they were a hint along the bottom of the field) */
+#credits-panel .credits-list { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 16px; color: var(--ink); font-size: 12px; line-height: 1.7; }
+#credits-panel .credits-list li { break-inside: avoid; overflow-wrap: anywhere; }
+
+/* The loading screen: a night sky, clouds far below, and a "fly" button once the
+   field is built. Goes with a fade once pressed. */
+#loading {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: #0e1118;
+  color: #e0dac9; text-align: center;
+  font: 14px/1.6 var(--ui);
+  transition: opacity 1.2s ease; overflow: hidden;
+}
+#loading.gone { opacity: 0; pointer-events: none; }
+/* The stars (index.html): drawn under the clouds' lines.
+   Per star: --s (size), --o (brightness); a few twinkle down from it and back */
+#loading .stars { position: absolute; inset: 0; z-index: -2; }
+#loading .stars i {
+  position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #fff;
+  opacity: var(--o);
+}
+@keyframes twinkle { 0%, 100% { opacity: var(--o); } 50% { opacity: calc(var(--o) * 0.3); } }
+/* The clouds (index.html .clouds): three layers of line clouds (a tile of
+   them built in index.html: outlines stroked, then filled with the night,
+   so only the outline of the whole shows), the
+   nearer bigger, brighter and faster. Each layer is a tile wider and taller than the screen: the <i>
+   slides across one tile and its <b> down one tile, over and over, so it
+   never jumps. Steering (index.html) changes only how fast each slides.
+   Moved by transform alone, so smooth while the field builds. Faded out
+   from the middle, so they sit under the bird and leave the edges dark.
+   Per layer: --tile (px), --a (opacity), --t (seconds a tile) */
+#loading .clouds {
+  position: absolute; inset: 0; z-index: -1; overflow: hidden;
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 42%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 42%, #000 25%, transparent 100%);
+}
+#loading .clouds i {
+  position: absolute; left: calc(-1 * var(--tile)); top: calc(-1 * var(--tile));
+  width: calc(100% + var(--tile)); height: calc(100% + var(--tile));
+  opacity: var(--a); will-change: transform;
+}
+#loading .clouds b {
+  position: absolute; inset: 0;
+  background: var(--cloud) 0 0 / var(--tile) var(--tile) repeat;
+  will-change: transform;
+}
+#loading .clouds .far { --tile: 300px; --a: 0.1; --t: 110s; }
+#loading .clouds .mid { --tile: 480px; --a: 0.16; --t: 70s; }
+#loading .clouds .near { --tile: 760px; --a: 0.24; --t: 45s; }
+/* The bird from above (index.html: the field's albatross projected onto
+   the ground), in line: hairlines in the title's colour, each shape filled
+   with the night; the beak's line pink. The wings bow in the glide: each
+   draws in toward its shoulder and back out, slowly, as the field's do */
+#loading .bird { position: relative; width: 280px; height: auto; margin-bottom: 36px; overflow: visible; }
+/* Dragged, it steers (its .pilot group, index.html), so a touch drag never
+   scrolls the page */
+#loading .bird { cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+#loading .bird .feather, #loading .bird .beak, #loading .bird .seam {
+  fill: #0e1118; stroke: #e0dac9; stroke-width: 0.9; stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+#loading .bird .beak { stroke: #e9b8a3; }
+#loading .bird .seam { stroke-opacity: 0.6; }
+#loading .bird .wing { will-change: transform; animation: glide 5s ease-in-out infinite; }
+@keyframes glide { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.93); } }
+/* The title in Cormorant Garamond, light: hairline strokes, like the bird's */
+#loading h1 {
+  margin: 0 0 30px; font: 300 46px/1.1 "Cormorant Garamond", Garamond, Georgia, serif; letter-spacing: 0.01em; /* title case, as written in index.html; over the bird, as far above it as the story line is below (30 + the screen's 10px gap = the bird's 36 + 10 − the line's 6) */
+}
+/* The loading bar: one of the settings' bars (.bar-wrap), but in line, as
+   the bird and the clouds are: a hairline outline, faintly filled as far as
+   the field is built; what is being built on the left and how far along on
+   the right; the words breathe while it builds */
+#loading .loading-bar {
+  --ink: #c9cfdd; --mute: #7d879e; --track: transparent;
+  width: 280px; margin: 8px 0 0; cursor: default;
+  box-shadow: inset 0 0 0 1px rgba(224, 218, 201, 0.35);
+}
+#loading .loading-bar .bar-fill { background: rgba(224, 218, 201, 0.12); }
+#loading .loading-bar .bar-fill::after { width: 1px; background: rgba(224, 218, 201, 0.7); }
+/* No easing on the fill: the build gives the page one frame a step, the
+   frame an easing would start in, so the fill sat a step behind the share */
+/* The bird's thoughts, over the bar: the title's face, smaller, breathing
+   while it builds; two lines' room held so a long one wrapping moves nothing */
+#loading .loading-line {
+  margin: -6px 0 0; max-width: min(600px, 94vw); min-height: 1.2em; display: flex; align-items: flex-start; justify-content: center; text-align: center; /* up under the title; wide enough that the longest line stays on one, wrapping only on a narrow phone */
+  font: italic 300 22px/1.2 "Cormorant Garamond", Garamond, Georgia, serif; color: #c9cfdd; /* italic: the bird's thoughts, set apart from the title in the same face */
+  will-change: opacity; animation: hum 2.2s ease-in-out infinite;
+}
+@keyframes hum { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } } /* dimmer than the title, which is whole: secondary */
+#loading.ready .loading-line { animation: none; opacity: 0.55; transition: opacity 0.25s; }
+@keyframes breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+#loading.ready #loading-status { animation: none; opacity: 0.85; }
+/* Built: the share goes, and "Play" alone sits in the middle of the bar,
+   which is now the button: a sea green outline and word, cool enough to
+   sit in the night sky; on hover it fills with the green */
+#loading.ready .loading-bar { justify-content: center; cursor: pointer; }
+#loading.ready #loading-pct { display: none; }
+#loading.ready .loading-bar { box-shadow: inset 0 0 0 1px #6fb39b; transition: box-shadow 0.25s; }
+#loading.ready .loading-bar .bar-fill, #loading.ready #loading-status { transition: background 0.25s, color 0.25s, opacity 0.25s; }
+#loading.ready .loading-bar .bar-fill { background: transparent; }
+#loading.ready .loading-bar .bar-fill::after { display: none; }
+#loading.ready #loading-status { color: #8fcab4; opacity: 1; }
+#loading.ready .loading-bar:hover .bar-fill { background: #3f7d69; filter: none; }
+#loading.ready .loading-bar:hover #loading-status { color: #eef3ec; }
+#loading.ready .loading-bar:focus-visible { outline: 2px solid rgba(230, 223, 204, 0.6); outline-offset: 2px; }
+/* The keys, under the bar (index.html .keys): a quiet caption, the arrows
+   drawn as keycaps, in line */
+#loading .keys { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; color: #8f9bb8; font-size: 13px; opacity: 0.6; }
+#loading .keys .arrows { height: 1.3em; width: auto; fill: none; stroke: currentColor; stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
+#loading .keys-touch { display: none; }
+/* "Reduce motion" asked for (the system's setting): the loading screen
+   still, but for what is steered or tapped: no twinkling, no breathing
+   words, no bowing wings (the clouds are held in index.html) */
+@media (prefers-reduced-motion: reduce) {
+  #loading .stars i, #loading-status, #loading .loading-line, #loading .bird .wing { animation: none !important; }
+}
+@media (hover: none) and (pointer: coarse) {
+  #loading .keys-mouse { display: none; }
+  #loading .keys-touch { display: flex; }
+}
+/* The byline (index.html .foot): a footnote at the foot of the screen */
+#loading .foot { position: absolute; bottom: 20px; left: 0; right: 0; color: #8f9bb8; font-size: 13px; }
+#loading .byline { margin: 0; opacity: 0.5; }
+#loading .byline a { color: inherit; text-decoration: underline; text-decoration-color: rgba(143, 155, 184, 0.4); text-underline-offset: 3px; transition: color 0.25s; }
+#loading .byline a:hover { color: #e0dac9; }
+
+/* Tabs: the field and the heads lab */
+#tabs {
+  position: fixed; top: 12px; left: 12px; z-index: 10;
+  display: flex; gap: 2px; padding: 3px;
+  background: rgba(10, 14, 28, 0.7); border-radius: 4px;
+  font: 13px/1 system-ui, sans-serif;
+}
+#tabs a {
+  color: #aab4cc; text-decoration: none; padding: 7px 12px; border-radius: 3px;
+}
+#tabs a:hover { color: #fff; }
+#tabs a.active { background: #e0dac9; color: #1b2440; }
+/* On a phone, the field alone: no tabs, and a drag on it steers (TOUCH),
+   so the page never scrolls or zooms under the finger */
+@media (hover: none) and (pointer: coarse) {
+  #tabs { display: none; }
+  canvas { touch-action: none; }
+}
+/* ...and on a small window, where they would crowd the settings */
+@media (max-width: 720px) {
+  #tabs { display: none; }
+}
+/* On the field, only with the settings' "dev tools" on (main.field.js);
+   the labs keep theirs. On, they show on any screen */
+body:not(.lab):not(.dev) #tabs { display: none; }
+body.dev #tabs { display: flex; }
+/* ...a desktop's alone: on a phone there is no switch, and no tabs even if it was left on */
+@media (hover: none) and (pointer: coarse) {
+  #dev-switch, body.dev #tabs { display: none; }
+}
+
+/* ---------------------------------------------------------------------
+   The labs (heads, pillars, moss, trees): a panel of knobs beside the
+   cream view (0xf3ecd8 in the scenes). The panel is a shade of oat under
+   that cream, set in a monospace face; every colour is a token here, so
+   the look is tuned in one place.
+   --------------------------------------------------------------------- */
+:root {
+  --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", "IBM Plex Mono", Consolas, monospace;
+  --lab-bg: #e7dfc9; /* the panel */
+  --lab-bg-2: #f1ead8; /* boxes, menus, hovered rows: between the panel and the view's cream */
+  --lab-line: #cdc2a5; /* rules, borders, slider tracks */
+  --lab-ink: #2a2721; /* text, thumbs, the active tab */
+  --lab-mute: #76705f; /* labels, hints */
+  --lab-faint: #a69e88; /* the quietest text: seeds, the view's hint */
+  --lab-moss: #6f8a52; /* a varied range's fill */
+  --lab-clay: #c0693a; /* a sweep axis */
+  --lab-glass: rgba(231, 223, 201, 0.86); /* panels floating over the view */
+}
+body.lab { font: 12px/1.45 var(--mono); color: var(--lab-ink); background: var(--lab-bg); }
+#lab { display: flex; height: 100%; }
+#lab-panel {
+  width: 336px; flex: none; overflow-y: auto; padding: 52px 16px 32px;
+  background: var(--lab-bg); border-right: 1px solid var(--lab-line); box-sizing: border-box;
+  scrollbar-width: thin; scrollbar-color: var(--lab-line) transparent;
+}
+#lab-view { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+#lab-view canvas { width: 100% !important; height: 100% !important; display: block; }
+
+/* The tabs sit over the top of the panel: plain words, the active one inked */
+body.lab #tabs {
+  top: 14px; left: 14px; gap: 2px; padding: 0; background: none;
+  font: 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+}
+body.lab #tabs a { color: var(--lab-mute); padding: 6px 8px; border-radius: 4px; }
+body.lab #tabs a:hover { color: var(--lab-ink); background: var(--lab-bg-2); }
+body.lab #tabs a.active { background: var(--lab-ink); color: var(--lab-bg); }
+
+/* Toolbar rows: menus, buttons, the seed, a checkbox or two */
+.lab-row { display: flex; align-items: center; gap: 6px 8px; margin: 0 0 8px; flex-wrap: wrap; }
+.lab-row > label { color: var(--lab-mute); }
+.lab-row[hidden] { display: none; }
+.lab-check { display: inline-flex; align-items: center; gap: 6px; color: var(--lab-mute); cursor: pointer; }
+.lab-check:hover { color: var(--lab-ink); }
+.lab-seed { color: var(--lab-faint); margin-left: auto; }
+.lab-row .lab-mute { color: var(--lab-mute); }
+.lab-day { width: 120px; margin: 0; accent-color: var(--lab-ink); cursor: pointer; } /* the scene lab's time-of-day slider */
+
+/* Controls, in the panel and in the bar over the view */
+.lab :is(select, button, input[type=number]) {
+  font: inherit; color: var(--lab-ink); background: var(--lab-bg-2); border: 1px solid var(--lab-line);
+  border-radius: 4px; padding: 4px 8px; line-height: 1.2; margin: 0;
+}
+.lab :is(select, button) { cursor: pointer; }
+.lab :is(select, button):hover { border-color: var(--lab-ink); }
+.lab button:active { background: var(--lab-ink); color: var(--lab-bg); border-color: var(--lab-ink); }
+.lab button.on { background: var(--lab-ink); color: var(--lab-bg); border-color: var(--lab-ink); } /* a picked toggle */
+.lab select {
+  appearance: none; -webkit-appearance: none; padding-right: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%2376705f' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.lab :is(select, button, input):focus-visible { outline: 1.5px solid var(--lab-ink); outline-offset: 1px; }
+.lab input[type=checkbox] { accent-color: var(--lab-ink); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+.lab input[type=range] { accent-color: var(--lab-ink); }
+
+/* Group headings: small caps, a rule running out to the right */
+.lab-group {
+  display: flex; align-items: center; gap: 8px; margin: 22px 0 4px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lab-mute);
+}
+.lab-group::after { content: ""; flex: 1; height: 1px; background: var(--lab-line); }
+
+/* One knob: its name, its number box(es), its slider under them. The row
+   lights up under the pointer, so the one being tuned is easy to find. */
+.prow { padding: 5px 6px 7px; margin: 0 -6px; border-radius: 4px; }
+.prow:hover { background: var(--lab-bg-2); }
+.prow-head { display: flex; align-items: center; gap: 7px; min-height: 22px; }
+.prow-head .name { flex: 1; min-width: 0; color: var(--lab-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow.varied .name { color: var(--lab-ink); }
+.prow.axis .name { color: var(--lab-clay); }
+.prow-head .boxes { display: inline-flex; align-items: center; gap: 4px; }
+/* The number boxes read as plain values until pointed at or focused */
+.prow-head input[type=number] {
+  width: 54px; padding: 2px 5px; font-size: 11px; text-align: right;
+  background: transparent; border-color: transparent; -moz-appearance: textfield;
+}
+.prow-head input[type=number]:hover, .prow-head input[type=number]:focus { background: var(--lab-bg-2); border-color: var(--lab-line); }
+.prow:hover .prow-head input[type=number] { background: var(--lab-bg); }
+.prow-head input[type=number]::-webkit-inner-spin-button { display: none; }
+.prow-head .dash { color: var(--lab-faint); }
+.prow-head input[type=color] {
+  width: 40px; height: 22px; padding: 2px; border: 1px solid var(--lab-line); border-radius: 4px;
+  background: var(--lab-bg-2); cursor: pointer;
+}
+.prow-head input[type=color]::-webkit-color-swatch { border: 0; border-radius: 2px; }
+.prow-head input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+/* which boxes and slider show depends on whether the knob is varied */
+.prow .boxes input:nth-child(1), .prow .boxes input:nth-child(3) { display: none; }
+.prow .boxes .dash { display: none; }
+.prow.varied .boxes input:nth-child(1), .prow.varied .boxes input:nth-child(3), .prow.varied .boxes .dash { display: inline-block; }
+.prow.varied .boxes input:nth-child(4) { display: none; }
+
+.prow-slider { position: relative; height: 22px; margin-top: 1px; }
+.prow .dual, .prow .single { position: absolute; inset: 0; }
+.prow .dual { display: none; }
+.prow.varied .dual { display: block; }
+.prow.varied .single { display: none; }
+/* a tick where the default sits */
+.prow .def {
+  position: absolute; top: 6px; width: 2px; height: 10px; margin-left: -1px;
+  background: var(--lab-ink); opacity: 0.3; pointer-events: none;
+}
+.prow input[type=range] {
+  position: absolute; left: 0; top: 0; width: 100%; height: 22px; margin: 0;
+  -webkit-appearance: none; appearance: none; background: none;
+}
+.prow .dual input[type=range] { pointer-events: none; }
+.prow input[type=range]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.prow input[type=range]::-moz-range-track { height: 4px; background: transparent; }
+.prow .single input[type=range]::-webkit-slider-runnable-track { background: var(--lab-line); border-radius: 2px; }
+.prow .single input[type=range]::-moz-range-track { background: var(--lab-line); border-radius: 2px; }
+.prow input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; pointer-events: auto; width: 14px; height: 14px; margin-top: -5px;
+  border-radius: 50%; background: var(--lab-ink); border: 2px solid var(--lab-bg); cursor: pointer;
+}
+.prow input[type=range]::-moz-range-thumb {
+  pointer-events: auto; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--lab-ink); border: 2px solid var(--lab-bg); cursor: pointer;
+}
+.prow .dual .track { position: absolute; left: 7px; right: 7px; top: 9px; height: 4px; background: var(--lab-line); border-radius: 2px; }
+.prow .dual .fill { position: absolute; top: 0; height: 4px; background: var(--lab-moss); border-radius: 2px; }
+.prow.axis .dual .fill { background: var(--lab-clay); }
+
+/* Over the view: the bar of view controls, labels, a tooltip, a toast */
+#lab-viewbar {
+  position: absolute; top: 12px; right: 12px; z-index: 5;
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--lab-glass); border: 1px solid var(--lab-line); border-radius: 6px;
+  color: var(--lab-mute); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#lab-viewbar input[type=range] { width: 120px; }
+/* A toggle or two on the view's left edge, halfway down */
+#lab-sidebar {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%); z-index: 5;
+  display: flex; flex-direction: column; gap: 6px; padding: 6px;
+  background: var(--lab-glass); border: 1px solid var(--lab-line); border-radius: 6px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#lab-viewbar .lab-hint { color: var(--lab-faint); font-size: 11px; }
+#lab-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.hlabel {
+  position: absolute; left: 0; top: 0; transform: translate(-1000px, -1000px);
+  margin-left: -60px; width: 120px; text-align: center; color: var(--lab-mute); font-size: 11px;
+  white-space: pre-line;
+}
+.hlabel .sub { display: block; color: var(--lab-clay); }
+#lab-tip {
+  position: absolute; z-index: 6; pointer-events: none; min-width: 170px;
+  padding: 8px 10px; background: rgba(243, 236, 216, 0.96); border: 1px solid var(--lab-line); border-radius: 6px;
+  color: var(--lab-ink); box-shadow: 0 2px 10px rgba(42, 39, 33, 0.1);
+}
+#lab-tip[hidden] { display: none; }
+#lab-tip .tip-title { font-weight: 600; margin-bottom: 4px; }
+#lab-tip .tip-row { display: flex; justify-content: space-between; gap: 16px; color: var(--lab-mute); }
+#lab-tip .tip-row b { color: var(--lab-ink); font-weight: 500; }
+#lab-tip .tip-hint { margin-top: 6px; color: var(--lab-faint); font-size: 11px; }
+#lab-toast, #lab-status {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 6; pointer-events: none;
+  padding: 6px 12px; border-radius: 4px; white-space: nowrap;
+}
+#lab-toast { top: 14px; background: var(--lab-ink); color: var(--lab-bg); }
+#lab-toast[hidden] { display: none; }
+#lab-status { bottom: 14px; background: var(--lab-glass); border: 1px solid var(--lab-line); color: var(--lab-mute); }
+#lab-status:empty { display: none; }
+
+/* The moss lab's rows carry placeholder colour boxes the heads lab's
+   switching needs; they stay hidden */
+.flower-row .boxes input[type=color] { display: none; }
+
+/* The scene lab's colour rows: a hex code to type, beside its swatch */
+.prow-head input.lab-hex {
+  width: 72px; padding: 2px 5px; font: inherit; font-size: 11px; color: var(--lab-ink);
+  background: transparent; border: 1px solid transparent; border-radius: 4px;
+}
+.prow-head input.lab-hex:hover, .prow-head input.lab-hex:focus { background: var(--lab-bg-2); border-color: var(--lab-line); outline: none; }
+.prow-head input.lab-hex.bad { color: var(--lab-clay); border-color: var(--lab-clay); }
+
+.graphics-setting select { color: var(--ink); font: inherit; border: 1px solid rgba(230,223,204,.18); border-radius: 7px; background: rgba(230,223,204,.07); padding: 5px 8px; cursor: pointer; }
+.graphics-setting select:hover { background: rgba(230,223,204,.13); }
+.graphics-setting { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; color: var(--mute); font: 12px/1.4 var(--ui); }
+#mini-map-panel { position: fixed; z-index: 8; right: 24px; bottom: 24px; width: 180px; height: 180px; box-sizing: border-box; display: grid; place-items: center; padding: 8px; border: 1px solid rgba(230,223,204,.15); border-radius: 50%; background: rgba(14,17,24,.42); backdrop-filter: blur(4px); pointer-events: none; }
+#mini-map { display: block; width: 156px; height: 156px; margin: 0; border-radius: 50%; }
+@media (max-width: 600px) { #mini-map-panel { right: 12px; bottom: 12px; width: 144px; height: 144px; padding: 6px; } #mini-map { width: 122px; height: 122px; } }
