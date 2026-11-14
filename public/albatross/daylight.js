@@ -9,23 +9,23 @@ import * as THREE from "three";
 
 export const HOURS = [
   {
-    at: 0, // night: inky blue-black
-    sky: 0x0e1118,
-    hemiSky: 0x7a8394,
-    hemiGround: 0x1c1f26,
-    hemiPower: 0.75,
+    at: 0, // night: clear moonlit indigo
+    sky: 0x1c273b,
+    hemiSky: 0x8ea0ba,
+    hemiGround: 0x2b3446,
+    hemiPower: 0.95,
     sunColor: 0xf4ecd6,
     sunPower: 2.0,
-    rimColor: 0x5d6778,
-    rimPower: 0.6,
+    rimColor: 0x6f7d94,
+    rimPower: 0.65,
     foam: 0x8f9bb0, // not used at night: the foam keeps its day colour, dimmed (FOAM_DIM)
   },
   {
-    at: 0.25, // twilight: the sky just lifting to violet
-    sky: 0x2b2940,
-    hemiSky: 0x77708e,
-    hemiGround: 0x221f28,
-    hemiPower: 0.8,
+    at: 0.25, // twilight: the sky lifting to soft violet-blue
+    sky: 0x3b3d5e,
+    hemiSky: 0x8f8bb2,
+    hemiGround: 0x333047,
+    hemiPower: 0.95,
     sunColor: 0xd4d6de, // still the moon
     sunPower: 1.5,
     rimColor: 0x5e6284,

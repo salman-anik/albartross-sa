@@ -174,8 +174,8 @@ const fallMaterial = new THREE.MeshBasicMaterial({ color: 0x9bd6d2, transparent:
 // then lifts out of the haze as you close, which is its fade-in. (It was
 // near 0.48, far 1.35: the far statues came in only 60% hazed, and popped.)
 const distanceParam = new URL(location.href).searchParams.get("distance");
-const SIGHT = distanceParam === "near" ? 100 : distanceParam === "far" ? 165 : 120;
-const HAZE = { near: 0.15 * SIGHT, far: 0.8 * SIGHT }; // dense: it starts thickening close by and is whole well before the sight (was near 0.6, far 1)
+const SIGHT = distanceParam === "near" ? 110 : distanceParam === "far" ? 190 : 150;
+const HAZE = { near: 0.55 * SIGHT, far: 1.35 * SIGHT };
 scene.fog = new THREE.Fog(SKY, HAZE.near, HAZE.far);
 // The lanterns' light: their windows, unlit, warm; dim by day, bright at
 // night (setDaylight). The material is made with the lanterns, further down
@@ -1096,8 +1096,8 @@ const WEATHER = {
     { name: "heavy snow", weight: 0.7, rain: [0, 0], wind: [0.05, 0.2], snow: [0.85, 1] }, // as thick as a blizzard but nearly still: it comes straight down
     { name: "blizzard", weight: 0.4, rain: [0, 0], wind: [0.8, 1], snow: [0.9, 1] },
   ],
-  last: [15, 45], // seconds a preset lasts (was 45 – 120)
-  first: 10, // seconds of clear weather to open with (was 60)
+  last: [120, 120], // seconds a preset lasts (2 minutes)
+  first: 120, // seconds of clear weather to open with (2 minutes)
   turn: 8, // seconds the rain or the wind takes to go from nothing to full toward a preset's (was 15: with presets this short, a storm would hardly arrive before it left)
   veer: 90, // degrees a preset's wind may come round from the last
   veerRate: 4, // degrees a second it comes round, at most
@@ -5412,18 +5412,22 @@ let lookYaw = 0, // the drag's turn away from straight behind
 // and climbs it (up, up), as the keys do but by degrees; let go, and it
 // levels out. The camera is already behind the heading, so it follows
 const TOUCH = {
-  reach: 90, // px the finger goes from where it came down for a full turn (or climb)
+  reach: 55, // px the finger goes from where it came down for a full turn (or climb)
+  holdMs: 200, // ms of touch-and-hold before speed boost activates
 };
 const touchSteer = { id: null, x: 0, y: 0, turn: 0, climb: 0 };
+const activeTouches = new Map();
 renderer.domElement.addEventListener("pointerdown", (e) => {
   renderer.domElement.setPointerCapture(e.pointerId);
   if (e.pointerType === "touch") {
+    activeTouches.set(e.pointerId, performance.now());
     if (touchSteer.id === null) Object.assign(touchSteer, { id: e.pointerId, x: e.clientX, y: e.clientY });
     return;
   }
   dragging = true;
 });
 const endTouchSteer = (e) => {
+  activeTouches.delete(e.pointerId);
   if (e.pointerId === touchSteer.id) Object.assign(touchSteer, { id: null, turn: 0, climb: 0 });
 };
 renderer.domElement.addEventListener("pointerup", (e) => {
@@ -5535,7 +5539,15 @@ renderer.setAnimationLoop(() => {
   pitchA += (climb * 0.45 - pitchA) * Math.min(1, delta * 3);
 
   // Diving trades height for speed, climbing bleeds it off
-  const boost = keys.Space ? 1.7 : 1;
+  const nowMs = performance.now();
+  let touchHoldBoost = false;
+  for (const downAt of activeTouches.values()) {
+    if (nowMs - downAt >= TOUCH.holdMs) {
+      touchHoldBoost = true;
+      break;
+    }
+  }
+  const boost = keys.Space || touchHoldBoost ? 1.7 : 1;
   const speed = THREE.MathUtils.clamp(CRUISE - pitchA * 11, 11, 31) * PACE * boost;
   moveDir.set(
     Math.sin(heading) * Math.cos(pitchA),
