@@ -58,7 +58,7 @@ export class CloudDeck {
           this.instances.push({
             x: (x + draw(x, z, i, 1)) * this.cellSize,
             z: (z + draw(x, z, i, 2)) * this.cellSize,
-            y: -22 + draw(x, z, i, 3) * 43,
+            y: 26 + draw(x, z, i, 3) * 44,
             sx: 20 + draw(x, z, i, 4) * 20,
             sy: 7 + draw(x, z, i, 5) * 9,
             sz: 13 + draw(x, z, i, 6) * 16,

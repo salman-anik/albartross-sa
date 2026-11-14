@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "The Albatross",
+  title: "Albartross SA",
   description: "A lone albatross makes first contact with a strange place.",
   icons: { icon: "/albatross/favicon.svg" },
 };

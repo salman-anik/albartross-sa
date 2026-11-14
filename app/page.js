@@ -19,7 +19,7 @@ export default function HomePage() {
         if (cancelled || !host.current) return;
 
         host.current.innerHTML = documentFragment.body.innerHTML;
-        document.title = "The Albatross";
+        document.title = "Albartross SA";
 
         const inertScripts = Array.from(host.current.querySelectorAll("script"));
         for (const inert of inertScripts) {
