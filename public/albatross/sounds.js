@@ -44,11 +44,11 @@
 import * as THREE from "three";
 
 export const SOUND = {
-  volume: 0.8, // the master, 0 – 1
+  volume: 1.0, // the master, 0 – 1
   music: {
-    file: "sounds/bgm.mp3", // "Ambient Samurai", Ichiro Nakagawa (Music For Dictionary Apps): looped under everything
-    gain: 0.3, // its level against the stone (the recording is loud: -16 dB mean, the scrapes -22 to -27, evened)
-    fadeIn: 5, // seconds it takes to come up at the start
+    file: "sounds/bgm.mp3",
+    gain: 0.85,
+    fadeIn: 2, // seconds it takes to come up at the start
   },
   // The sea (sounds/ambient-ocean, surf, surf-2: streamed like the music,
   // looped, through the master so M mutes them too)
