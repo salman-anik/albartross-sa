@@ -5492,27 +5492,31 @@ let lookYaw = 0, // the drag's turn away from straight behind
 // levels out. The camera is already behind the heading, so it follows
 const TOUCH = {
   reach: 55, // px the finger goes from where it came down for a full turn (or climb)
-  holdMs: 120, // ms of tap-and-hold before speed boost activates
+  holdMs: 350, // ms of stationary tap-and-hold before speed boost activates
+  holdMove: 12, // px movement allowed before a hold counts as steering/rotating instead
 };
 const touchSteer = { id: null, x: 0, y: 0, turn: 0, climb: 0 };
 const activeTouches = new Map();
-const mouseHold = { active: false, downAt: 0, x: 0, y: 0, moved: false };
+const mouseHold = { active: false, downAt: 0, x: 0, y: 0, moved: false, boosted: false };
 let boostNow = 1;
 renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
 renderer.domElement.addEventListener("pointerdown", (e) => {
   renderer.domElement.setPointerCapture(e.pointerId);
   if (e.pointerType === "touch") {
-    activeTouches.set(e.pointerId, performance.now());
+    activeTouches.set(e.pointerId, { downAt: performance.now(), x: e.clientX, y: e.clientY, moved: false, boosted: false });
     if (touchSteer.id === null) Object.assign(touchSteer, { id: e.pointerId, x: e.clientX, y: e.clientY });
     return;
   }
   dragging = true;
-  if (e.button === 0) Object.assign(mouseHold, { active: true, downAt: performance.now(), x: e.clientX, y: e.clientY, moved: false });
+  if (e.button === 0) Object.assign(mouseHold, { active: true, downAt: performance.now(), x: e.clientX, y: e.clientY, moved: false, boosted: false });
 });
 const endTouchSteer = (e) => {
   activeTouches.delete(e.pointerId);
   if (e.pointerId === touchSteer.id) Object.assign(touchSteer, { id: null, turn: 0, climb: 0 });
-  if (e.pointerType !== "touch") mouseHold.active = false;
+  if (e.pointerType !== "touch") {
+    mouseHold.active = false;
+    mouseHold.boosted = false;
+  }
 };
 renderer.domElement.addEventListener("pointerup", (e) => {
   endTouchSteer(e);
@@ -5520,12 +5524,18 @@ renderer.domElement.addEventListener("pointerup", (e) => {
 });
 renderer.domElement.addEventListener("pointercancel", endTouchSteer);
 renderer.domElement.addEventListener("pointermove", (e) => {
+  if (e.pointerType === "touch") {
+    const t = activeTouches.get(e.pointerId);
+    if (t && !t.boosted && !t.moved && Math.hypot(e.clientX - t.x, e.clientY - t.y) > TOUCH.holdMove) {
+      t.moved = true;
+    }
+  }
   if (e.pointerId === touchSteer.id) {
     touchSteer.turn = THREE.MathUtils.clamp((e.clientX - touchSteer.x) / TOUCH.reach, -1, 1);
     touchSteer.climb = THREE.MathUtils.clamp(-(e.clientY - touchSteer.y) / TOUCH.reach, -1, 1);
     return;
   }
-  if (mouseHold.active && !mouseHold.moved && Math.hypot(e.clientX - mouseHold.x, e.clientY - mouseHold.y) > 8) {
+  if (mouseHold.active && !mouseHold.boosted && !mouseHold.moved && Math.hypot(e.clientX - mouseHold.x, e.clientY - mouseHold.y) > TOUCH.holdMove) {
     mouseHold.moved = true;
   }
   if (!dragging) return;
@@ -5627,10 +5637,16 @@ renderer.setAnimationLoop(() => {
 
   // Diving trades height for speed, climbing bleeds it off
   const nowMs = performance.now();
-  let holdBoost = mouseHold.active && !mouseHold.moved && nowMs - mouseHold.downAt >= TOUCH.holdMs;
+  if (mouseHold.active && !mouseHold.moved && !mouseHold.boosted && nowMs - mouseHold.downAt >= TOUCH.holdMs) {
+    mouseHold.boosted = true;
+  }
+  let holdBoost = mouseHold.boosted;
   if (!holdBoost) {
-    for (const downAt of activeTouches.values()) {
-      if (nowMs - downAt >= TOUCH.holdMs) {
+    for (const t of activeTouches.values()) {
+      if (!t.moved && !t.boosted && nowMs - t.downAt >= TOUCH.holdMs) {
+        t.boosted = true;
+      }
+      if (t.boosted) {
         holdBoost = true;
         break;
       }
