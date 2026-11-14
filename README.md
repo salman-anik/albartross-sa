@@ -2,6 +2,8 @@
 
 A Next.js App Router edition of the 3D **Albatross** flight & island exploration experience, built with Three.js, React 19, and Next.js 16.
 
+**Live Demo:** https://albartross-sa.vercel.app
+
 ## Features
 
 - **Next.js App Router** (`app/page.js`, `app/layout.js`) mounting the interactive Three.js world
