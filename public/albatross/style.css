@@ -24,6 +24,7 @@ canvas:active { cursor: grabbing; }
 #settings-toggle span { display: block; width: 18px; height: 18px; font-size: 16px; line-height: 18px; color: var(--fill); }
 #settings-toggle span svg { display: block; width: 100%; height: 100%; }
 #settings-toggle b { font-weight: 500; text-transform: capitalize; }
+#credits-toggle { width: 34px; padding: 0; justify-content: center; }
 #credits-toggle .cd { display: block; width: 18px; height: 18px; color: var(--fill); }
 #credits-toggle .cd svg { display: block; width: 100%; height: 100%; }
 #settings-toggle i { font-style: normal; color: var(--mute); font-variant-numeric: tabular-nums; }
