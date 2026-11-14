@@ -5656,7 +5656,7 @@ renderer.setAnimationLoop(() => {
   starMat.uniforms.uTime.value = clock.elapsedTime;
 
   // The key light and its shadow box follow the bird; the mist drifts
-  wildlife.update(player.position, clock.elapsedTime);
+  wildlife.update(player.position, clock.elapsedTime, heading, pitchA);
   landLife.update(player.position, clock.elapsedTime, delta);
   worldMap.draw(player.position.x, player.position.z, heading, clock.elapsedTime);
   followSun(player.position);

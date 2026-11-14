@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 const BIRD_SPECIES = [
+  { name: "albatross", color: 0xf4f2eb, scale: 1.45, altitude: 32, speed: 0.045, wing: 0.36 },
   { name: "eagle", color: 0x9a7950, scale: 1.35, altitude: 40, speed: 0.04, wing: 0.34 },
   { name: "hawk", color: 0x8f8170, scale: 1.08, altitude: 33, speed: 0.058, wing: 0.42 },
   { name: "falcon", color: 0x82766b, scale: 0.82, altitude: 28, speed: 0.078, wing: 0.55 },
@@ -56,6 +57,17 @@ export class SkyFlocks {
     }
     this.flocks = Array.from({ length: 25 }, () => ({ angle: rand() * Math.PI * 2, radius: 65 + rand() * 95, altitude: 12 + rand() * 58, speed: 0.035 + rand() * 0.035, phase: rand() * Math.PI * 2 }));
     this.dummy = new THREE.Object3D();
+    this.companion = {
+      idx: 0,
+      state: "idle",
+      until: 8 + rand() * 12,
+      side: 1,
+      lateral: 4.5,
+      fore: -1.2,
+      dy: 0.8,
+      pos: new THREE.Vector3(),
+      yaw: 0,
+    };
     this.setDensity(density);
   }
 
@@ -65,9 +77,74 @@ export class SkyFlocks {
     this.wings.count = this.density * 2;
   }
 
-  update(origin, time) {
+  update(origin, time, heading = 0, pitchA = 0) {
+    const comp = this.companion;
+    if (this.density > 0 && time > comp.until) {
+      if (comp.state === "idle") {
+        comp.idx = Math.floor(Math.random() * this.density);
+        if (Math.random() < 0.45) {
+          this.birds[comp.idx].species = 0; // albatross companion
+          this.birds[comp.idx].size = BIRD_SPECIES[0].scale * (0.9 + Math.random() * 0.2);
+          const col = new THREE.Color(BIRD_SPECIES[0].color);
+          this.body.setColorAt(comp.idx, col);
+          this.wings.setColorAt(comp.idx * 2, col);
+          this.wings.setColorAt(comp.idx * 2 + 1, col);
+          if (this.body.instanceColor) this.body.instanceColor.needsUpdate = true;
+          if (this.wings.instanceColor) this.wings.instanceColor.needsUpdate = true;
+        }
+        comp.side = Math.random() < 0.5 ? 1 : -1;
+        comp.lateral = 3.8 + Math.random() * 3.2;
+        comp.fore = -2.2 + Math.random() * 2.5;
+        comp.dy = -0.5 + Math.random() * 2.2;
+        const entrySide = comp.side * (42 + Math.random() * 18);
+        comp.pos.set(
+          origin.x + Math.cos(heading) * entrySide - Math.sin(heading) * 18,
+          origin.y + 8 + Math.random() * 8,
+          origin.z - Math.sin(heading) * entrySide - Math.cos(heading) * 18,
+        );
+        comp.yaw = heading;
+        comp.state = "fly";
+        comp.until = time + 18 + Math.random() * 16;
+      } else if (comp.state === "fly") {
+        comp.state = "leave";
+        comp.until = time + 5.5;
+      } else {
+        comp.state = "idle";
+        comp.until = time + 16 + Math.random() * 20;
+      }
+    }
     for (let i = 0; i < this.density; i++) {
       const b = this.birds[i], f = this.flocks[b.flock], spec = BIRD_SPECIES[b.species];
+      if (comp.state !== "idle" && i === comp.idx) {
+        const leaveOut = comp.state === "leave" ? comp.side * 55 : 0;
+        const leaveUp = comp.state === "leave" ? 18 : 0;
+        const tx = origin.x + Math.cos(heading) * (comp.side * comp.lateral + leaveOut) + Math.sin(heading) * comp.fore;
+        const tz = origin.z - Math.sin(heading) * (comp.side * comp.lateral + leaveOut) + Math.cos(heading) * comp.fore;
+        const ty = origin.y + comp.dy + leaveUp + Math.sin(time * 1.4 + b.phase) * 0.45;
+        const lerpK = comp.state === "leave" ? 0.025 : 0.065;
+        comp.pos.x += (tx - comp.pos.x) * lerpK;
+        comp.pos.y += (ty - comp.pos.y) * lerpK;
+        comp.pos.z += (tz - comp.pos.z) * lerpK;
+        const targetYaw = comp.state === "leave" ? heading + comp.side * 0.75 : heading;
+        let dYaw = ((targetYaw - comp.yaw + Math.PI) % (Math.PI * 2)) - Math.PI;
+        if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+        comp.yaw += dYaw * 0.08;
+        this.dummy.position.copy(comp.pos);
+        this.dummy.rotation.set(-pitchA * 0.6, comp.yaw, 0);
+        this.dummy.scale.setScalar(b.size);
+        this.dummy.updateMatrix();
+        this.body.setMatrixAt(i, this.dummy.matrix);
+        const flapAmp = pitchA > 0.08 || comp.state === "leave" ? spec.wing * 1.15 : 0.14;
+        const flap = Math.sin(time * (pitchA > 0.08 ? 6.5 : 3.2) + b.phase) * flapAmp;
+        for (let side = 0; side < 2; side++) {
+          this.dummy.position.copy(comp.pos);
+          this.dummy.rotation.set(-pitchA * 0.6, comp.yaw, side ? flap : -flap);
+          this.dummy.scale.set((side ? -1 : 1) * b.size, b.size, b.size);
+          this.dummy.updateMatrix();
+          this.wings.setMatrixAt(i * 2 + side, this.dummy.matrix);
+        }
+        continue;
+      }
       if (time > b.modeAt) {
         b.mode = (b.mode + 1 + Math.floor(Math.abs(Math.sin(b.phase + time) * 2))) % 3;
         b.modeAt = time + 14 + Math.abs(Math.sin(b.phase * 1.9 + time * 0.03)) * 24;
