@@ -552,6 +552,7 @@ export class Sounds {
   // Thunder, once: `near` 0 – 1 (1 right overhead: loud and bright; less,
   // further off: quieter and a little lower, as the high end dies with distance)
   thunder(near = 1) {
+    return; // relaxation mode: no thunder claps
     if (!this.ready || !CLIPS.thunder) return;
     this.say(`thunder (near ${near.toFixed(2)})`);
     const t = this.ctx.currentTime;
@@ -616,6 +617,7 @@ export class Sounds {
 
   // ---- the neck ---------------------------------------------------------
   neck(key, x, y, z, s, dTwist, dCurl, delta) {
+    return; // relaxation mode: no stone grinding
     if (!this.ready) return;
     let N = this.necks.get(key);
     if (!N) this.necks.set(key, (N = { still: 0, side: 0, updown: 0, lastAt: -Infinity }));
@@ -652,6 +654,7 @@ export class Sounds {
   // An arm on the move: its grind follows how fast it swings round, folds
   // and lifts, like a neck's follows its turn
   arm(key, x, y, z, s, dYaw, dCurl, dUp, delta) {
+    return; // relaxation mode: no stone grinding
     if (!this.ready) return;
     const dt = Math.max(delta, 1e-3);
     this.grind(key, x, y, z, s, (Math.abs(dYaw) + 1.5 * Math.abs(dCurl) + 2 * Math.abs(dUp)) / dt);
@@ -731,6 +734,7 @@ export class Sounds {
   // gain, placed and pitched as a grind is, and stopped like one when it is
   // no longer fed (listen)
   rumble(key, x, y, z, s, speed) {
+    return; // relaxation mode: no ominous rumbles
     if (!this.ready || !USE.rumble.length) return;
     const R = SOUND.rumble;
     key += ":rumble";
@@ -800,6 +804,7 @@ export class Sounds {
   }
   // A scrape: a long one (the hands) or a short one (a side-to-side reversal)
   scrape(x, y, z, s, which = "long") {
+    return; // relaxation mode: no stone scrapes
     this.say(`scrape (${which})`);
     this.once(pick(USE[which]), x, y, z, s, LEVEL.scrape);
   }

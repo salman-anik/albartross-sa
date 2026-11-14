@@ -2679,10 +2679,10 @@ function seaReach(riseLen, s, bend = SEA.bend) {
 const TEMPO = { on: true, at: 4, range: [1.4, 2.6] };
 // Trees: dotted over every island, alone and in clumps, off the mounds
 const WOOD = {
-  per: [18, 36], // keeps the islands forested while reducing instance and placement work
-  clumped: 0.6, // share of them dealt in clumps rather than alone
-  clump: [3, 8], // trees to a clump
-  spread: 24, // world units a clump spreads over
+  per: [42, 78], // dense forests across the islands
+  clumped: 0.65, // share of them dealt in clumps rather than alone
+  clump: [5, 11], // trees to a clump
+  spread: 28, // world units a clump spreads over
   // (each tree's scale is its kind's, TREES[kind].scale in scenery.js, the trees lab's to slide)
   mound: 0.25, // world units of mound under a tree at most: they keep off the heads' earth
   reach: 0.4, // head units of room past where a bent head can reach (its bend, plus the head itself)
@@ -2964,7 +2964,7 @@ function groupAt(cx, cz) {
   g.trees = [];
   g.fauna = [];
   const ir = g.island ? g.island.r : 0;
-  const wood = g.island ? Math.round(between(WOOD.per, 0, 150) * (ir / 60) ** 2 * (special ? SPECIAL.trees : 1)) : 0;
+  const wood = g.island ? Math.round(between(WOOD.per, 0, 180) * (ir / 60) ** 2 * (special ? SPECIAL.trees : 1)) : 0;
   const spot = (n, seed) => {
     if (NATURE_MODE && seed === 154 && g.island?.rivers?.length && hash(cx * 32 + n, cz, 156) < 0.34) {
       const river = g.island.rivers[Math.floor(hash(cx * 32 + n, cz, 157) * g.island.rivers.length)];
@@ -2994,7 +2994,7 @@ function groupAt(cx, cz) {
   if (NATURE_MODE) {
     g.hands = [];
     if (g.island) {
-      const count = 2 + Math.floor(draw(0, 193) * 5);
+      const count = 8 + Math.floor(draw(0, 193) * 10);
       const species = ["deer", "rabbit", "fox", "horse", "goat", "duck"];
       for (let i = 0; i < count; i++) {
         let kind = species[Math.floor(draw(i, 194) * species.length)];
@@ -5287,8 +5287,8 @@ const MEADOW = {
   scale: [2.6, 3.5],
   mound: 0.35, // world units of mound under a daisy at most: the earth above that is bare
   lean: 0.2, // radians a stem may lean off upright
-  count: [1350, 1650], // flowers across each island's open garden clearing
-  max: 1500, // per look: bounded GPU instance storage
+  count: [2000, 2400], // flowers & creeps across each island's open garden clearing
+  max: 2400, // per look: bounded GPU instance storage
   reach: 1, // coarse cells out from the bird's the meadow is filled (the trees go SCENERY_REACH): a flower is lost in the haze long before that
 };
 // The lab's colours stay customizable, but the garden boosts their saturation
@@ -5384,8 +5384,8 @@ const bird = buildAlbatross(BIRD);
 const { player, body } = bird; // player: its place and heading; body: its bank and pitch
 scene.add(player);
 const cloudDeck = new CloudDeck(scene, hash, GROUP.cell);
-const wildlife = new SkyFlocks(scene, SEED, groupAt, getHeight, 20);
-const landLife = new LandLife(scene, groupAt, getHeight, 12);
+const wildlife = new SkyFlocks(scene, SEED, groupAt, getHeight, 96);
+const landLife = new LandLife(scene, groupAt, getHeight, 60);
 
 // ---- Flight ----
 const CRUISE = 18; // gliding speed
@@ -5536,7 +5536,7 @@ renderer.setAnimationLoop(() => {
   );
 
   heading -= turn * 1.5 * delta;
-  pitchA += (climb * 0.45 - pitchA) * Math.min(1, delta * 3);
+  pitchA += (climb * 0.72 - pitchA) * Math.min(1, delta * 3);
 
   // Diving trades height for speed, climbing bleeds it off
   const nowMs = performance.now();

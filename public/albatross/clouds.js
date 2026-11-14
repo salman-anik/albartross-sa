@@ -58,7 +58,7 @@ export class CloudDeck {
           this.instances.push({
             x: (x + draw(x, z, i, 1)) * this.cellSize,
             z: (z + draw(x, z, i, 2)) * this.cellSize,
-            y: 26 + draw(x, z, i, 3) * 44,
+            y: 52 + draw(x, z, i, 3) * 48,
             sx: 20 + draw(x, z, i, 4) * 20,
             sy: 7 + draw(x, z, i, 5) * 9,
             sz: 13 + draw(x, z, i, 6) * 16,
@@ -76,9 +76,8 @@ export class CloudDeck {
     const cellZ = Math.floor(player.position.z / this.cellSize);
     if (cellX !== this.cellX || cellZ !== this.cellZ) this.rebuild(cellX, cellZ);
 
-    // Keep clouds in the local flight band while their horizontal positions
-    // stay world-anchored, so the bird naturally passes through each bank.
-    this.mesh.position.set(0, player.position.y, 0);
+    // Keep clouds anchored in the upper sky so the bird can climb up into them.
+    this.mesh.position.set(0, 0, 0);
     const motionStep = Math.floor(time * 2);
     if (motionStep !== this.lastMotion) {
       this.lastMotion = motionStep;

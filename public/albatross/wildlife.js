@@ -20,9 +20,9 @@ const BIRD_SPECIES = [
 // Instanced silhouettes; each bird has its own species, speed, altitude,
 // flight state, direction, and timer. Only a few draw calls cover the flock.
 export class SkyFlocks {
-  constructor(scene, seed, groupAt, getHeight, density = 60) {
-    this.count = 120;
-    this.density = 60;
+  constructor(scene, seed, groupAt, getHeight, density = 96) {
+    this.count = 150;
+    this.density = 96;
     this.groupAt = groupAt;
     this.getHeight = getHeight;
     this.birds = [];
@@ -54,7 +54,7 @@ export class SkyFlocks {
       const col = new THREE.Color(BIRD_SPECIES[sp].color);
       this.body.setColorAt(i, col); this.wings.setColorAt(i * 2, col); this.wings.setColorAt(i * 2 + 1, col);
     }
-    this.flocks = Array.from({ length: 20 }, () => ({ angle: rand() * Math.PI * 2, radius: 70 + rand() * 90, altitude: 13 + rand() * 34, speed: 0.035 + rand() * 0.035, phase: rand() * Math.PI * 2 }));
+    this.flocks = Array.from({ length: 25 }, () => ({ angle: rand() * Math.PI * 2, radius: 65 + rand() * 95, altitude: 12 + rand() * 58, speed: 0.035 + rand() * 0.035, phase: rand() * Math.PI * 2 }));
     this.dummy = new THREE.Object3D();
     this.setDensity(density);
   }
@@ -144,17 +144,17 @@ const TASKS = {
 // Individual, seeded finite-state behavior. Agents are only simulated near
 // the player; every animal keeps its own destination, timer, pace, and state.
 export class LandLife {
-  constructor(scene, groupAt, getHeight, density = 36) {
+  constructor(scene, groupAt, getHeight, density = 60) {
     this.groupAt = groupAt; this.getHeight = getHeight; this.density = density;
     this.active = []; this.cell = ""; this.dummy = new THREE.Object3D();
     this.fields = Object.fromEntries(ANIMAL_TYPES.map((type) => {
-      const mesh = new THREE.InstancedMesh(animalGeometry(type), new THREE.MeshStandardMaterial({ color: ANIMAL_COLOR[type], roughness: 1, flatShading: true }), 80);
+      const mesh = new THREE.InstancedMesh(animalGeometry(type), new THREE.MeshStandardMaterial({ color: ANIMAL_COLOR[type], roughness: 1, flatShading: true }), 120);
       mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = false; mesh.count = 0; scene.add(mesh);
       return [type, mesh];
     }));
   }
 
-  setDensity(value) { this.density = THREE.MathUtils.clamp(Math.round(value), 0, 72); }
+  setDensity(value) { this.density = THREE.MathUtils.clamp(Math.round(value), 0, 120); }
 
   loadNear(x, z) {
     const cx = Math.floor(x / 180), cz = Math.floor(z / 180), key = `${cx},${cz}`;
@@ -162,7 +162,7 @@ export class LandLife {
     this.cell = key; this.active.length = 0;
     for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
       const g = this.groupAt(cx + dx, cz + dz);
-      for (const animal of g.fauna ?? []) if (this.active.length < 72) this.active.push({ animal, group: g });
+      for (const animal of g.fauna ?? []) if (this.active.length < 120) this.active.push({ animal, group: g });
     }
     this.active.sort((a, b) => Math.hypot(a.animal.x - x, a.animal.z - z) - Math.hypot(b.animal.x - x, b.animal.z - z));
   }
@@ -179,6 +179,15 @@ export class LandLife {
       const tree = trees[Math.floor(agent.rand() * trees.length)]; target = { x: tree.x, z: tree.z };
     } else if (["climb", "jump"].includes(agent.task) && island?.peaks?.length) {
       const peak = island.peaks[Math.floor(agent.rand() * island.peaks.length)]; target = { x: peak.x, z: peak.z };
+    } else if (["walk", "graze", "forage"].includes(agent.task) && agent.rand() < 0.65) {
+      const mates = (group.fauna ?? []).filter((other) => other !== animal && other.kind === kind);
+      if (mates.length) {
+        const mate = mates[Math.floor(agent.rand() * mates.length)];
+        target = { x: mate.x + (agent.rand() - 0.5) * 6, z: mate.z + (agent.rand() - 0.5) * 6 };
+      } else if (island) {
+        const a = agent.rand() * Math.PI * 2, d = Math.sqrt(agent.rand()) * island.r * 0.72;
+        target = { x: island.x + Math.sin(a) * d, z: island.z + Math.cos(a) * d };
+      }
     } else if (island) {
       const a = agent.rand() * Math.PI * 2, d = Math.sqrt(agent.rand()) * island.r * 0.72;
       target = { x: island.x + Math.sin(a) * d, z: island.z + Math.cos(a) * d };
