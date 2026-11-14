@@ -1745,6 +1745,8 @@ const foamMat = new THREE.ShaderMaterial({
       return smoothstep(at - w, at + w, x);
     }
     void main() {
+      float d = max(abs(vWorld.x - uRimCenter.x), abs(vWorld.y - uRimCenter.y));
+      if (d >= uRim.y) discard;
       // How far out from the nearest shore this point lies: the lobes'
       // smooth-minimum field, as islandField works it out, less the shore's
       // width out to the waterline
@@ -1777,7 +1779,6 @@ const foamMat = new THREE.ShaderMaterial({
       float line = uEdge * (1.0 - cut(uLine * (0.8 + 0.4 * noise(p * 3.0 + uDrift)), away));
       float foam = max(lace, line);
       // Sunk with the island at the rim
-      float d = max(abs(vWorld.x - uRimCenter.x), abs(vWorld.y - uRimCenter.y));
       foam *= 1.0 - smoothstep(uRim.x, uRim.y, d);
       if (foam <= 0.0) discard;
       gl_FragColor = vec4(uColor, uAlpha * foam);
@@ -1925,11 +1926,14 @@ function placeFloes() {
   deal(I.big, 341, (x, z, r) => (slabs.push({ x, z, r }), true));
   deal(I.small, 361, (x, z, r) => slabs.every((o) => Math.hypot(o.x - x, o.z - z) > o.r + r));
 }
+let iceIdle = false;
 function stepIce(delta) {
   const I = ICE;
   const snowing = SNOW.level > 0.05 && SNOW.amount > I.from;
+  if (iceIdle && !snowing && I.level === 0) return;
   I.level = THREE.MathUtils.clamp(I.level + (snowing ? SNOW.amount / I.freeze : -1 / I.thaw) * delta, 0, 1);
   const k = THREE.MathUtils.smoothstep(I.level, 0, 1);
+  iceIdle = !snowing && I.level === 0;
   iceUniforms.uIce.value = k;
   water.material.color.copy(waterBase).lerp(iceWater, k);
   water.material.opacity = THREE.MathUtils.lerp(WATER.opacity, I.waterAlpha, k);
@@ -5615,6 +5619,7 @@ const clock = new THREE.Clock();
 for (const m of [terrain.material, meadowMat, plaster, handMat, stoneMat, rubbleMat, fallenMat]) addSnow(m);
 addSnow(treeMat, SNOW.treeSlope); // (the spires take it on their steep faces too)
 
+let mapAccum = 0.045;
 renderer.setAnimationLoop(() => {
   const delta = Math.min(clock.getDelta(), 0.1);
   if (perfLog) logPerf(delta, performance.now() / 1000);
@@ -5846,7 +5851,11 @@ renderer.setAnimationLoop(() => {
   // The key light and its shadow box follow the bird; the mist drifts
   wildlife.update(player.position, clock.elapsedTime);
   landLife.update(player.position, clock.elapsedTime, delta);
-  worldMap.draw(player.position.x, player.position.z, heading, clock.elapsedTime, partnerRoot.position);
+  mapAccum += delta;
+  if (mapAccum >= 0.045) {
+    mapAccum = 0;
+    worldMap.draw(player.position.x, player.position.z, heading, clock.elapsedTime, partnerRoot.position);
+  }
   followSun(player.position);
   for (const L of mistLayers) {
     L.mat.uniforms.uTime.value = clock.elapsedTime;
