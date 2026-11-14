@@ -466,7 +466,6 @@ export class Sounds {
         }
       }),
     );
-    this.ready = true;
   }
   nextMusic() {
     this.musicOn = true;
