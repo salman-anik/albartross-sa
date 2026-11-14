@@ -92,15 +92,16 @@ export class SkyFlocks {
           if (this.body.instanceColor) this.body.instanceColor.needsUpdate = true;
           if (this.wings.instanceColor) this.wings.instanceColor.needsUpdate = true;
         }
+        const portrait = typeof window !== "undefined" && (window.innerWidth < window.innerHeight || window.innerWidth < 700);
         comp.side = Math.random() < 0.5 ? 1 : -1;
-        comp.lateral = 3.8 + Math.random() * 3.2;
-        comp.fore = -2.2 + Math.random() * 2.5;
-        comp.dy = -0.5 + Math.random() * 2.2;
-        const entrySide = comp.side * (42 + Math.random() * 18);
+        comp.lateral = portrait ? 1.8 + Math.random() * 1.3 : 3.2 + Math.random() * 2.4;
+        comp.fore = portrait ? 1.6 + Math.random() * 2.4 : -1.2 + Math.random() * 2.4;
+        comp.dy = -0.3 + Math.random() * 1.6;
+        const entrySide = comp.side * (portrait ? 16 + Math.random() * 8 : 36 + Math.random() * 16);
         comp.pos.set(
-          origin.x + Math.cos(heading) * entrySide - Math.sin(heading) * 18,
-          origin.y + 8 + Math.random() * 8,
-          origin.z - Math.sin(heading) * entrySide - Math.cos(heading) * 18,
+          origin.x + Math.cos(heading) * entrySide - Math.sin(heading) * 14,
+          origin.y + 6 + Math.random() * 6,
+          origin.z - Math.sin(heading) * entrySide - Math.cos(heading) * 14,
         );
         comp.yaw = heading;
         comp.state = "fly";
