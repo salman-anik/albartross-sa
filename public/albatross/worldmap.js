@@ -23,7 +23,7 @@ export class WorldMap {
     }
   }
 
-  draw(x, z, heading, time) {
+  draw(x, z, heading, time, partner = null) {
     const ctx = this.ctx;
     if (!ctx || time - this.lastDraw < 0.18) return;
     this.lastDraw = time;
@@ -69,6 +69,28 @@ export class WorldMap {
       }
     }
     ctx.restore();
+    if (partner) {
+      const dx = partner.x - x, dz = partner.z - z;
+      const cos = Math.cos(heading - Math.PI), sin = Math.sin(heading - Math.PI);
+      const rx = (dx * cos - dz * sin) * scale;
+      const rz = (dx * sin + dz * cos) * scale;
+      const maxR = size * 0.41;
+      const d = Math.hypot(rx, rz);
+      const mx = c + (d > maxR ? (rx / d) * maxR : rx);
+      const my = c + (d > maxR ? (rz / d) * maxR : rz);
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(Math.atan2(rx, -rz));
+      ctx.beginPath();
+      ctx.moveTo(0, -6); ctx.lineTo(4.2, 4.5); ctx.lineTo(0, 2); ctx.lineTo(-4.2, 4.5);
+      ctx.closePath();
+      ctx.fillStyle = "#ff8fb8";
+      ctx.fill();
+      ctx.strokeStyle = "#fff0f6";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
     ctx.strokeStyle = "rgba(230, 235, 220, .55)"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(c, c, size * 0.44, 0, Math.PI * 2); ctx.stroke();
     ctx.save(); ctx.translate(c, c);

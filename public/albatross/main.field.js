@@ -1741,26 +1741,29 @@ const foamMat = new THREE.ShaderMaterial({
     }
     // A hard step, one pixel soft so it does not shimmer
     float cut(float at, float x) {
-      float w = fwidth(x);
+      float w = max(fwidth(x), 1e-4);
       return smoothstep(at - w, at + w, x);
     }
     void main() {
       // How far out from the nearest shore this point lies: the lobes'
       // smooth-minimum field, as islandField works it out, less the shore's
       // width out to the waterline
-      float m = 1e9;
-      for (int i = 0; i < MAXI; i++) {
-        if (i >= uCount) break;
-        vec3 L = uLobes[i];
-        m = min(m, length(vWorld - L.xy) - L.z);
+      float away = 1e6;
+      if (uCount > 0) {
+        float m = 1e9;
+        for (int i = 0; i < MAXI; i++) {
+          if (i >= uCount) break;
+          vec3 L = uLobes[i];
+          m = min(m, length(vWorld - L.xy) - L.z);
+        }
+        float sum = 0.0;
+        for (int i = 0; i < MAXI; i++) {
+          if (i >= uCount) break;
+          vec3 L = uLobes[i];
+          sum += exp(-(length(vWorld - L.xy) - L.z - m) / uBlend);
+        }
+        away = m - uBlend * log(max(sum, 1e-12)) - uShoreOut;
       }
-      float sum = 0.0;
-      for (int i = 0; i < MAXI; i++) {
-        if (i >= uCount) break;
-        vec3 L = uLobes[i];
-        sum += exp(-(length(vWorld - L.xy) - L.z - m) / uBlend);
-      }
-      float away = m - uBlend * log(sum) - uShoreOut;
       if (away < -1.0) discard; // under the island
       // Two octaves of lace, wandering; the second crawls the other way so
       // the patches change shape as they go rather than sliding whole
@@ -5383,6 +5386,82 @@ await loading("finding the bird", 0.97); // a step of the bar, so it does not si
 const bird = buildAlbatross(BIRD);
 const { player, body } = bird; // player: its place and heading; body: its bank and pitch
 scene.add(player);
+const partner = buildAlbatross({
+  ...BIRD,
+  colour: {
+    white: 0xffb3cc,
+    dark: 0xb0486e,
+    beak: 0xffd1ba,
+  },
+});
+const { player: partnerRoot, body: partnerBody } = partner;
+partnerRoot.traverse((obj) => {
+  if (obj.isMesh && obj.material) {
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const m of mats) {
+      if (m.emissive) {
+        m.emissive.setHex(0xff5fa2);
+        m.emissiveIntensity = 0.18;
+      }
+    }
+  }
+});
+{
+  const gCanvas = document.createElement("canvas");
+  gCanvas.width = gCanvas.height = 128;
+  const gCtx = gCanvas.getContext("2d");
+  const grad = gCtx.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grad.addColorStop(0, "rgba(255, 165, 208, 0.38)");
+  grad.addColorStop(0.35, "rgba(255, 110, 175, 0.14)");
+  grad.addColorStop(1, "rgba(255, 110, 175, 0)");
+  gCtx.fillStyle = grad;
+  gCtx.fillRect(0, 0, 128, 128);
+  const glowTex = new THREE.CanvasTexture(gCanvas);
+  const glowSprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex,
+      color: 0xff9ec7,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false,
+    }),
+  );
+  glowSprite.scale.set(4.0, 4.0, 1);
+  partnerBody.add(glowSprite);
+}
+partnerRoot.position.set(player.position.x + 38, player.position.y + 8, player.position.z - 42);
+partnerRoot.visible = true;
+scene.add(partnerRoot);
+const partnerState = {
+  state: "roam",
+  until: 300,
+  side: 1,
+  lateral: 3.5,
+  fore: 1.5,
+  dy: 0.6,
+  yaw: Math.PI * 0.7,
+  pitch: 0,
+  goalX: player.position.x + 55,
+  goalZ: player.position.z - 55,
+  goalY: 28,
+  goalTimer: 0,
+};
+const flyTogetherBtn = document.getElementById("fly-together-btn");
+function startFlyTogether(tNow) {
+  const portrait = innerWidth < innerHeight || innerWidth < 700;
+  partnerState.side = Math.random() < 0.5 ? 1 : -1;
+  partnerState.lateral = portrait ? 2.1 + Math.random() * 1.1 : 3.4 + Math.random() * 1.8;
+  partnerState.fore = portrait ? 1.8 + Math.random() * 2.0 : 0.4 + Math.random() * 2.0;
+  partnerState.dy = -0.2 + Math.random() * 1.3;
+  partnerState.state = "fly";
+  partnerState.until = tNow + 30;
+  if (flyTogetherBtn) flyTogetherBtn.hidden = true;
+}
+flyTogetherBtn?.addEventListener("click", () => {
+  if (!started) return;
+  startFlyTogether(clock.elapsedTime);
+});
 const cloudDeck = new CloudDeck(scene, hash, GROUP.cell);
 const wildlife = new SkyFlocks(scene, SEED, groupAt, getHeight, 96);
 const landLife = new LandLife(scene, groupAt, getHeight, 60);
@@ -5413,10 +5492,13 @@ let lookYaw = 0, // the drag's turn away from straight behind
 // levels out. The camera is already behind the heading, so it follows
 const TOUCH = {
   reach: 55, // px the finger goes from where it came down for a full turn (or climb)
-  holdMs: 200, // ms of touch-and-hold before speed boost activates
+  holdMs: 120, // ms of tap-and-hold before speed boost activates
 };
 const touchSteer = { id: null, x: 0, y: 0, turn: 0, climb: 0 };
 const activeTouches = new Map();
+const mouseHold = { active: false, downAt: 0, x: 0, y: 0, moved: false };
+let boostNow = 1;
+renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
 renderer.domElement.addEventListener("pointerdown", (e) => {
   renderer.domElement.setPointerCapture(e.pointerId);
   if (e.pointerType === "touch") {
@@ -5425,10 +5507,12 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
     return;
   }
   dragging = true;
+  if (e.button === 0) Object.assign(mouseHold, { active: true, downAt: performance.now(), x: e.clientX, y: e.clientY, moved: false });
 });
 const endTouchSteer = (e) => {
   activeTouches.delete(e.pointerId);
   if (e.pointerId === touchSteer.id) Object.assign(touchSteer, { id: null, turn: 0, climb: 0 });
+  if (e.pointerType !== "touch") mouseHold.active = false;
 };
 renderer.domElement.addEventListener("pointerup", (e) => {
   endTouchSteer(e);
@@ -5440,6 +5524,9 @@ renderer.domElement.addEventListener("pointermove", (e) => {
     touchSteer.turn = THREE.MathUtils.clamp((e.clientX - touchSteer.x) / TOUCH.reach, -1, 1);
     touchSteer.climb = THREE.MathUtils.clamp(-(e.clientY - touchSteer.y) / TOUCH.reach, -1, 1);
     return;
+  }
+  if (mouseHold.active && !mouseHold.moved && Math.hypot(e.clientX - mouseHold.x, e.clientY - mouseHold.y) > 8) {
+    mouseHold.moved = true;
   }
   if (!dragging) return;
   lookYaw -= e.movementX * 0.005;
@@ -5540,15 +5627,18 @@ renderer.setAnimationLoop(() => {
 
   // Diving trades height for speed, climbing bleeds it off
   const nowMs = performance.now();
-  let touchHoldBoost = false;
-  for (const downAt of activeTouches.values()) {
-    if (nowMs - downAt >= TOUCH.holdMs) {
-      touchHoldBoost = true;
-      break;
+  let holdBoost = mouseHold.active && !mouseHold.moved && nowMs - mouseHold.downAt >= TOUCH.holdMs;
+  if (!holdBoost) {
+    for (const downAt of activeTouches.values()) {
+      if (nowMs - downAt >= TOUCH.holdMs) {
+        holdBoost = true;
+        break;
+      }
     }
   }
-  const boost = keys.Space || touchHoldBoost ? 1.7 : 1;
-  const speed = THREE.MathUtils.clamp(CRUISE - pitchA * 11, 11, 31) * PACE * boost;
+  const boostTarget = keys.Space || holdBoost ? 2.2 : 1;
+  boostNow += (boostTarget - boostNow) * Math.min(1, delta * 8);
+  const speed = THREE.MathUtils.clamp(CRUISE - pitchA * 11, 11, 31) * PACE * boostNow;
   moveDir.set(
     Math.sin(heading) * Math.cos(pitchA),
     Math.sin(pitchA),
@@ -5583,6 +5673,88 @@ renderer.setAnimationLoop(() => {
 
   // Wings: a slow glide bow most of the time, real flapping when climbing
   bird.beat(delta, pitchA);
+
+  // Pink partner albatross: only one companion, roams with its own mind nearby,
+  // and flies together for 30s every 5 minutes.
+  {
+    const tNow = clock.elapsedTime;
+    const dxP = partnerRoot.position.x - player.position.x;
+    const dyP = partnerRoot.position.y - player.position.y;
+    const dzP = partnerRoot.position.z - player.position.z;
+    const distToPlayer = Math.hypot(dxP, dyP, dzP);
+
+    if (partnerState.state === "roam") {
+      if (started && tNow > partnerState.until) {
+        startFlyTogether(tNow);
+      } else {
+        partnerState.goalTimer -= delta;
+        const distToGoal = Math.hypot(partnerState.goalX - partnerRoot.position.x, partnerState.goalZ - partnerRoot.position.z);
+        const userFollowing = distToPlayer < 48 && Math.cos(wrapAngle(heading - partnerState.yaw)) > 0.45;
+        if (userFollowing) {
+          // User is following the companion: keep leading further ahead to explore together
+          if (partnerState.goalTimer <= 0 || distToGoal < 45) {
+            const leadAngle = partnerState.yaw + (Math.random() - 0.5) * 0.65;
+            const leadDist = 140 + Math.random() * 90;
+            partnerState.goalX = partnerRoot.position.x + Math.sin(leadAngle) * leadDist;
+            partnerState.goalZ = partnerRoot.position.z + Math.cos(leadAngle) * leadDist;
+            const groundGoal = Math.max(getHeight(partnerState.goalX, partnerState.goalZ), WATER_Y);
+            partnerState.goalY = groundGoal + 16 + Math.random() * 26;
+            partnerState.goalTimer = 7 + Math.random() * 6;
+          }
+        } else if (partnerState.goalTimer <= 0 || distToGoal < 14 || distToPlayer > 125) {
+          // Roaming on its own: stay within reach if the player isn't following
+          const a = Math.random() * Math.PI * 2;
+          const r = distToPlayer > 125 ? 45 + Math.random() * 40 : 40 + Math.random() * 65;
+          partnerState.goalX = player.position.x + Math.sin(a) * r;
+          partnerState.goalZ = player.position.z + Math.cos(a) * r;
+          const groundGoal = Math.max(getHeight(partnerState.goalX, partnerState.goalZ), WATER_Y);
+          partnerState.goalY = groundGoal + 14 + Math.random() * 28;
+          partnerState.goalTimer = 6 + Math.random() * 7;
+        }
+        const wantYaw = Math.atan2(partnerState.goalX - partnerRoot.position.x, partnerState.goalZ - partnerRoot.position.z);
+        const turnDelta = wrapAngle(wantYaw - partnerState.yaw);
+        partnerState.yaw += turnDelta * Math.min(1, delta * 1.35);
+        const wantPitch = THREE.MathUtils.clamp((partnerState.goalY - partnerRoot.position.y) * 0.04, -0.35, 0.45);
+        partnerState.pitch += (wantPitch - partnerState.pitch) * Math.min(1, delta * 2.0);
+        const pSpeed = userFollowing ? Math.max(speed * 1.05, 14.5) : 13.5;
+        partnerRoot.position.x += Math.sin(partnerState.yaw) * Math.cos(partnerState.pitch) * pSpeed * delta;
+        partnerRoot.position.y += Math.sin(partnerState.pitch) * pSpeed * delta;
+        partnerRoot.position.z += Math.cos(partnerState.yaw) * Math.cos(partnerState.pitch) * pSpeed * delta;
+        const pFloor = Math.max(getHeight(partnerRoot.position.x, partnerRoot.position.z), WATER_Y) + 3;
+        if (partnerRoot.position.y < pFloor) partnerRoot.position.y = pFloor;
+        partnerRoot.rotation.y = partnerState.yaw;
+        partnerBody.rotation.z = THREE.MathUtils.clamp(-turnDelta * 0.65, -0.55, 0.55);
+        partnerBody.rotation.x = -partnerState.pitch * 0.7;
+        partner.beat(delta, partnerState.pitch);
+      }
+    }
+
+    if (partnerState.state === "fly") {
+      if (tNow > partnerState.until) {
+        partnerState.state = "roam";
+        partnerState.until = tNow + 300;
+        partnerState.goalTimer = 0; // immediately pick its own new direction away from player
+      } else {
+        const tx = player.position.x + Math.cos(heading) * (partnerState.side * partnerState.lateral) + Math.sin(heading) * partnerState.fore;
+        const tz = player.position.z - Math.sin(heading) * (partnerState.side * partnerState.lateral) + Math.cos(heading) * partnerState.fore;
+        const ty = player.position.y + partnerState.dy + Math.sin(tNow * 1.4) * 0.35;
+        const lerpK = 1 - Math.exp(-3.8 * delta);
+        partnerRoot.position.x += (tx - partnerRoot.position.x) * lerpK;
+        partnerRoot.position.y += (ty - partnerRoot.position.y) * lerpK;
+        partnerRoot.position.z += (tz - partnerRoot.position.z) * lerpK;
+        partnerState.yaw += wrapAngle(heading - partnerState.yaw) * Math.min(1, delta * 5);
+        partnerRoot.rotation.y = partnerState.yaw;
+        partnerBody.rotation.z = roll;
+        partnerBody.rotation.x = -pitchA * 0.7;
+        partner.beat(delta, pitchA);
+      }
+    }
+
+    if (flyTogetherBtn) {
+      const showBtn = started && partnerState.state === "roam" && distToPlayer < 48;
+      if (flyTogetherBtn.hidden === showBtn) flyTogetherBtn.hidden = !showBtn;
+    }
+  }
 
   // Camera trails behind, and never sinks into a hill
   if (!dragging) lookYaw *= Math.max(0, 1 - delta * CAMERA.settle); // back behind the bird
@@ -5656,9 +5828,9 @@ renderer.setAnimationLoop(() => {
   starMat.uniforms.uTime.value = clock.elapsedTime;
 
   // The key light and its shadow box follow the bird; the mist drifts
-  wildlife.update(player.position, clock.elapsedTime, heading, pitchA);
+  wildlife.update(player.position, clock.elapsedTime);
   landLife.update(player.position, clock.elapsedTime, delta);
-  worldMap.draw(player.position.x, player.position.z, heading, clock.elapsedTime);
+  worldMap.draw(player.position.x, player.position.z, heading, clock.elapsedTime, partnerRoot.position);
   followSun(player.position);
   for (const L of mistLayers) {
     L.mat.uniforms.uTime.value = clock.elapsedTime;
@@ -5676,6 +5848,13 @@ renderer.setAnimationLoop(() => {
 function fly() {
   if (started) return;
   started = true;
+  if (PHONE_VIEW) {
+    const root = document.documentElement;
+    try {
+      const req = root.requestFullscreen?.({ navigationUI: "hide" }) ?? root.webkitRequestFullscreen?.();
+      if (req?.catch) req.catch(() => {});
+    } catch {}
+  }
   sounds.start();
   loadingEl.classList.add("gone");
   setTimeout(() => loadingEl.remove(), 1500);
@@ -5703,3 +5882,23 @@ const musicBox = document.getElementById("music-on"),
   sfxBox = document.getElementById("sfx-on");
 if (musicBox) musicBox.addEventListener("change", () => sounds.playMusic(musicBox.checked));
 if (sfxBox) sfxBox.addEventListener("change", () => sounds.playSfx(sfxBox.checked));
+const fullscreenBtn = document.getElementById("fullscreen-toggle");
+if (fullscreenBtn) {
+  const syncFs = () => {
+    const active = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    fullscreenBtn.setAttribute("aria-pressed", String(active));
+  };
+  fullscreenBtn.addEventListener("click", () => {
+    const active = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    try {
+      if (active) {
+        (document.exitFullscreen?.() ?? document.webkitExitFullscreen?.())?.catch?.(() => {});
+      } else {
+        const root = document.documentElement;
+        (root.requestFullscreen?.({ navigationUI: "hide" }) ?? root.webkitRequestFullscreen?.())?.catch?.(() => {});
+      }
+    } catch {}
+  });
+  document.addEventListener("fullscreenchange", syncFs);
+  document.addEventListener("webkitfullscreenchange", syncFs);
+}

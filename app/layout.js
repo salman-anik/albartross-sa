@@ -2,6 +2,21 @@ export const metadata = {
   title: "Albartross SA",
   description: "A lone albatross makes first contact with a strange place.",
   icons: { icon: "/albatross/favicon.svg" },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Albartross SA",
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#0e1118",
 };
 
 const importMap = {

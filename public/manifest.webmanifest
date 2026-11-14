@@ -1,0 +1,17 @@
+{
+  "name": "Albartross SA",
+  "short_name": "Albartross SA",
+  "description": "A lone albatross makes first contact with a strange place.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0e1118",
+  "theme_color": "#0e1118",
+  "icons": [
+    {
+      "src": "/albatross/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

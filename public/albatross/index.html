@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Albartross SA</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <!-- What a shared link shows: the words, and a view of the field (og.jpg) -->
@@ -245,6 +248,12 @@
     <aside id="mini-map-panel" aria-label="Nearby world map">
       <canvas id="mini-map" width="200" height="200" aria-label="Rotating map of nearby islands, rivers, and waterfalls"></canvas>
     </aside>
+    <button id="fullscreen-toggle" class="pop-toggle" type="button" aria-label="Toggle fullscreen" title="Fullscreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+      </svg>
+    </button>
+    <button id="fly-together-btn" class="pop-toggle" type="button" hidden>Fly Together</button>
     <!-- The settings: one small button at the top right; the day, the
          music, the weather and the credits only when it is opened -->
     <div id="settings">
