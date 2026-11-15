@@ -17,6 +17,7 @@ Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatr
 - **Additional views:** use the in-game tabs to open the Field, Heads, Pillars, Obelisks, Trees, Albatross, and Scene pages.
 - **Touch support:** swipe to steer and climb, and press and hold to boost.
 - **Installable and offline-ready:** after four minutes of mobile flight, an install option appears. The browser menu can install the same app at any time. The service worker saves the app shell and game resources as they load, so after the first online play the installed game can launch without a connection.
+- **Search-ready homepage:** descriptive page title and summary, canonical URL, Open Graph metadata, a `WebSite` structured-data entry, and crawlable `robots.txt` and `sitemap.xml` endpoints.
 
 ## Controls
 
@@ -63,6 +64,7 @@ npm run start
 
 - `app/page.js` mounts the existing game experience in the Next.js page.
 - `app/layout.js` provides the page metadata, styles, and Three.js import map.
+- `app/robots.js` and `app/sitemap.js` publish crawl rules and the canonical homepage URL for search engines.
 - `public/albatross/` contains the game interface, Three.js world, models, shaders, sound files, fonts, mini map, and additional views.
 - `public/sw.js` caches the app shell and same-origin game resources for offline launches.
 - `public/app-icon.svg` is the installable app icon.

@@ -204,6 +204,10 @@ canvas:active { cursor: grabbing; }
 #loading h1 {
   margin: 0 0 30px; font: 300 46px/1.1 "Cormorant Garamond", Garamond, Georgia, serif; letter-spacing: 0.01em; /* title case, as written in index.html; over the bird, as far above it as the story line is below (30 + the screen's 10px gap = the bird's 36 + 10 − the line's 6) */
 }
+#loading .loading-description {
+  max-width: min(520px, 88vw); margin: -20px 16px 12px; color: #c9cfdd;
+  font: 400 14px/1.45 var(--ui); opacity: 0.8;
+}
 /* The loading bar: one of the settings' bars (.bar-wrap), but in line, as
    the bird and the clouds are: a hairline outline, faintly filled as far as
    the field is built; what is being built on the left and how far along on
