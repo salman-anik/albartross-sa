@@ -41,6 +41,8 @@ export class SkyFlocks {
     const wingGeo = new THREE.ShapeGeometry(wingShape, 1).rotateX(-Math.PI / 2);
     this.body = new THREE.InstancedMesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }), this.count);
     this.wings = new THREE.InstancedMesh(wingGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 1 }), this.count * 2);
+    this.body.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.wings.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.body.frustumCulled = this.wings.frustumCulled = false;
     this.body.castShadow = this.wings.castShadow = false;
     scene.add(this.body, this.wings);
@@ -103,13 +105,21 @@ export class SkyFlocks {
         this.wings.setMatrixAt(i * 2 + side, this.dummy.matrix);
       }
     }
-    this.body.instanceMatrix.needsUpdate = true; this.wings.instanceMatrix.needsUpdate = true;
+    if (this.density) {
+      this.body.instanceMatrix.clearUpdateRanges();
+      this.body.instanceMatrix.addUpdateRange(0, this.density * 16);
+      this.body.instanceMatrix.needsUpdate = true;
+      this.wings.instanceMatrix.clearUpdateRanges();
+      this.wings.instanceMatrix.addUpdateRange(0, this.density * 2 * 16);
+      this.wings.instanceMatrix.needsUpdate = true;
+    }
   }
 }
 
 const ANIMAL_TYPES = ["deer", "rabbit", "fox", "horse", "goat", "duck"];
 const ANIMAL_COLOR = { deer: 0x8b6543, rabbit: 0xc3b8a2, fox: 0xb66b3e, horse: 0x6f5541, goat: 0xb4aa8e, duck: 0x66806a };
 const ANIMAL_SPEED = { deer: 2.5, rabbit: 3.4, fox: 2.8, horse: 3.1, goat: 1.9, duck: 1.1 };
+const MOVING_TASKS = new Set(["walk", "run", "explore", "search", "climb", "jump", "hop", "flee", "swim", "browse"]);
 
 function animalGeometry(kind) {
   const bits = [];
@@ -150,9 +160,11 @@ export class LandLife {
     this.active = []; this.cell = ""; this.dummy = new THREE.Object3D();
     this.fields = Object.fromEntries(ANIMAL_TYPES.map((type) => {
       const mesh = new THREE.InstancedMesh(animalGeometry(type), new THREE.MeshStandardMaterial({ color: ANIMAL_COLOR[type], roughness: 1, flatShading: true }), 120);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = false; mesh.count = 0; scene.add(mesh);
       return [type, mesh];
     }));
+    this.fieldList = Object.values(this.fields);
   }
 
   setDensity(value) { this.density = THREE.MathUtils.clamp(Math.round(value), 0, 120); }
@@ -203,32 +215,42 @@ export class LandLife {
 
   update(player, time, delta) {
     this.loadNear(player.x, player.z);
-    for (const field of Object.values(this.fields)) field.count = 0;
-    for (const { animal: a, group } of this.active.slice(0, this.density)) {
+    for (const field of this.fieldList) field.count = 0;
+    const activeCount = Math.min(this.active.length, this.density);
+    for (let index = 0; index < activeCount; index++) {
+      const { animal: a, group } = this.active[index];
       if (!a.agent) {
         let seed = (a.id ^ 0xa511e9b3) >>> 0;
         a.agent = { task: "", timer: 0, phase: seed % 628 / 100, yaw: 0, rand() { seed = Math.imul(seed ^ (seed >>> 15), 1 | seed); seed ^= seed + Math.imul(seed ^ (seed >>> 7), 61 | seed); return ((seed ^ (seed >>> 14)) >>> 0) / 4294967296; } };
         a.x = a.x; a.z = a.z; a.pace = ANIMAL_SPEED[a.kind] * (0.72 + a.agent.rand() * 0.58);
       }
-      const A = a.agent, distPlayer = Math.hypot(a.x - player.x, a.z - player.z);
-      if (distPlayer > 420) continue;
-      if (distPlayer < 21 && A.task !== "flee" && a.kind !== "duck") {
-        const dx = a.x - player.x, dz = a.z - player.z, d = Math.hypot(dx, dz) || 1;
+      const A = a.agent,
+        playerDX = a.x - player.x,
+        playerDZ = a.z - player.z,
+        playerDistanceSq = playerDX * playerDX + playerDZ * playerDZ;
+      if (playerDistanceSq > 420 * 420) continue;
+      if (playerDistanceSq < 21 * 21 && A.task !== "flee" && a.kind !== "duck") {
+        const d = Math.sqrt(playerDistanceSq) || 1;
+        const dx = playerDX, dz = playerDZ;
         A.task = "flee"; A.timer = 2.2 + A.rand() * 1.8;
         A.destination = { x: a.x + dx / d * (26 + A.rand() * 22), z: a.z + dz / d * (26 + A.rand() * 22) };
       }
       A.timer -= delta;
-      let d = A.destination ? Math.hypot(A.destination.x - a.x, A.destination.z - a.z) : 0;
-      if (A.timer <= 0 || (d < 1.3 && !["graze", "rest", "look", "observe", "hide"].includes(A.task))) this.chooseTask(A, a.kind, a, group, player);
-      const moving = ["walk", "run", "explore", "search", "climb", "jump", "hop", "flee", "swim", "browse"].includes(A.task);
+      const destinationDX = A.destination ? A.destination.x - a.x : 0,
+        destinationDZ = A.destination ? A.destination.z - a.z : 0,
+        destinationDistanceSq = destinationDX * destinationDX + destinationDZ * destinationDZ;
+      if (A.timer <= 0 || (destinationDistanceSq < 1.69 && !["graze", "rest", "look", "observe", "hide"].includes(A.task))) this.chooseTask(A, a.kind, a, group, player);
+      const moving = MOVING_TASKS.has(A.task);
       if (moving && A.destination) {
-        d = Math.hypot(A.destination.x - a.x, A.destination.z - a.z);
+        const dx = A.destination.x - a.x,
+          dz = A.destination.z - a.z,
+          d = Math.hypot(dx, dz);
         if (d > 0.2) {
           const pace = A.task === "flee" || A.task === "run" || A.task === "hop" || A.task === "jump" ? a.pace * 1.85 : a.pace;
-          const step = Math.min(d, pace * delta), wantYaw = Math.atan2(A.destination.x - a.x, A.destination.z - a.z);
+          const step = Math.min(d, pace * delta), wantYaw = Math.atan2(dx, dz);
           A.yaw += THREE.MathUtils.euclideanModulo(wantYaw - A.yaw + Math.PI, Math.PI * 2) - Math.PI;
           A.yaw = THREE.MathUtils.damp(A.yaw, wantYaw, 7, delta);
-          a.x += (A.destination.x - a.x) / d * step; a.z += (A.destination.z - a.z) / d * step;
+          a.x += (dx / d) * step; a.z += (dz / d) * step;
         }
       }
       A.phase += delta * (moving ? 8 : 1.2);
@@ -238,6 +260,11 @@ export class LandLife {
       this.dummy.position.set(a.x, this.getHeight(a.x, a.z) + bob, a.z);
       this.dummy.rotation.set(0, A.yaw, 0); this.dummy.scale.setScalar(a.scale); this.dummy.updateMatrix(); field.setMatrixAt(i, this.dummy.matrix);
     }
-    for (const field of Object.values(this.fields)) field.instanceMatrix.needsUpdate = true;
+    for (const field of this.fieldList) {
+      if (!field.count) continue;
+      field.instanceMatrix.clearUpdateRanges();
+      field.instanceMatrix.addUpdateRange(0, field.count * 16);
+      field.instanceMatrix.needsUpdate = true;
+    }
   }
 }

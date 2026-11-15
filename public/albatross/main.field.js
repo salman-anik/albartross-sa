@@ -827,6 +827,7 @@ const rainStroke = (slant, dir) =>
     .rotateY(Math.atan2(-dir.y, dir.x)); // ...turned so downwind is the wind's way
 const rainMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: true });
 const rain = new THREE.InstancedMesh(rainStroke(rainSlant(), windDir), rainMat, RAIN.drops);
+rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 rain.frustumCulled = false;
 rain.visible = false;
 scene.add(rain);
@@ -890,7 +891,8 @@ function stepRain(delta) {
     bottom = c.y - R.height / 2;
   const fall = R.speed * delta;
   const out = rain.instanceMatrix.array;
-  for (let i = 0; i < R.drops; i++) {
+  const updateCount = rainSeeded ? count : R.drops;
+  for (let i = 0; i < updateCount; i++) {
     const j = i * 3;
     let x = rainPos[j],
       y = rainPos[j + 1],
@@ -900,7 +902,6 @@ function stepRain(delta) {
       y = bottom + Math.random() * R.height;
       z = c.z + (Math.random() * 2 - 1) * half;
     } else {
-      if (i >= count) continue; // (not falling now: it keeps its place for when the rain picks up)
       y -= fall;
       x += fall * slant * windDir.x;
       z += fall * slant * windDir.y;
@@ -926,6 +927,8 @@ function stepRain(delta) {
     out[k + 2] = z;
   }
   rainSeeded = true;
+  rain.instanceMatrix.clearUpdateRanges();
+  rain.instanceMatrix.addUpdateRange(0, updateCount * 16);
   rain.instanceMatrix.needsUpdate = true;
 }
 // The wind made visible (WIND_FX): faint lines streaming downwind, each
@@ -972,8 +975,11 @@ const windFxMat = () =>
 // A field of them: its mesh (a stroke along +x, or a mote) and each one's
 // place, age, life, length or size, speed and phase
 function windField(geo, n) {
-  geo.setAttribute("aAlpha", new THREE.InstancedBufferAttribute(new Float32Array(n), 1));
+  const alpha = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
+  alpha.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute("aAlpha", alpha);
   const mesh = new THREE.InstancedMesh(geo, windFxMat(), n);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   mesh.frustumCulled = false;
   mesh.count = 0;
   mesh.visible = false;
@@ -1019,7 +1025,8 @@ function stepWindField(F, spec, delta, amount, isLine) {
     [across, tall] = WIND_FX.box;
   F.mesh.material.uniforms.uOpacity.value = spec.opacity;
   F.mesh.material.uniforms.uColor.value.copy(scene.fog.color).lerp(MIST_WHITE, WIND_FX.lighten);
-  const alpha = F.mesh.geometry.attributes.aAlpha.array;
+  const alphaAttribute = F.mesh.geometry.attributes.aAlpha;
+  const alpha = alphaAttribute.array;
   const yaw = Math.atan2(-windDir.y, windDir.x); // +x turned to downwind
   for (let i = 0; i < live; i++) {
     const j = i * 3;
@@ -1055,8 +1062,12 @@ function stepWindField(F, spec, delta, amount, isLine) {
     fxDummy.updateMatrix();
     F.mesh.setMatrixAt(i, fxDummy.matrix);
   }
+  F.mesh.instanceMatrix.clearUpdateRanges();
+  F.mesh.instanceMatrix.addUpdateRange(0, live * 16);
   F.mesh.instanceMatrix.needsUpdate = true;
-  F.mesh.geometry.attributes.aAlpha.needsUpdate = true;
+  alphaAttribute.clearUpdateRanges();
+  alphaAttribute.addUpdateRange(0, live);
+  alphaAttribute.needsUpdate = true;
 }
 function stepWindFx(delta) {
   const amount = THREE.MathUtils.smoothstep(windNow, WIND_FX.from, 1);
@@ -1326,6 +1337,7 @@ if (settingsPanel) settingsPanel.addEventListener("input", paintSettings);
 const snowGeo = new THREE.IcosahedronGeometry(1, 0);
 const snowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: true });
 const snowFlakes = new THREE.InstancedMesh(snowGeo, snowMat, SNOW.flakes);
+snowFlakes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 snowFlakes.frustumCulled = false;
 snowFlakes.visible = false;
 snowFlakes.count = 0;
@@ -1357,7 +1369,8 @@ function stepSnow(delta) {
     bottom = c.y - tall / 2;
   const out = snowFlakes.instanceMatrix.array;
   const blow = S.drift * windNow * delta;
-  for (let i = 0; i < S.flakes; i++) {
+  const updateCount = flakesSeeded ? count : S.flakes;
+  for (let i = 0; i < updateCount; i++) {
     const j = i * 3;
     let x = flakePos[j],
       y = flakePos[j + 1],
@@ -1371,7 +1384,6 @@ function stepSnow(delta) {
       const r = S.size[0] + Math.random() * (S.size[1] - S.size[0]);
       out[i * 16] = out[i * 16 + 5] = out[i * 16 + 10] = r; // its size, kept in its matrix
     } else {
-      if (i >= count) continue;
       const sway = Math.sin(snowT * 1.3 + flakePhase[i]) * S.waver * delta;
       y -= flakeFall[i] * delta;
       x += windDir.x * blow + sway;
@@ -1396,6 +1408,8 @@ function stepSnow(delta) {
     out[k + 2] = z;
   }
   flakesSeeded = true;
+  snowFlakes.instanceMatrix.clearUpdateRanges();
+  snowFlakes.instanceMatrix.addUpdateRange(0, updateCount * 16);
   snowFlakes.instanceMatrix.needsUpdate = true;
 }
 // The sliders
@@ -3808,7 +3822,9 @@ const fwdDir = new THREE.Vector3();
 // The bird this visit: one of albatross.js's VARIANTS at random, laid over
 // ALBATROSS as the albatross tab last set it
 const BIRD = withVariant(loadSavedAlbatross(), pickVariant());
-const BIRD_R = 0.7 * BIRD.size; // the bird's collision radius
+const MALE_BIRD_SIZE = 1.08;
+const COMPANION_SIZE = 0.82;
+let BIRD_R = 0.7 * BIRD.size; // updated with the selected player's size
 
 // Where a point localZ along the head's forward axis lands in world x/z: the
 // foot faces pose.yaw, and the head is wrung round from it by the twist about
@@ -4280,6 +4296,7 @@ const treeLook = treeColours(LAB_PALETTE.trees, LAB_PALETTE.bark); // the lab's 
 const treeFields = TREE_KINDS.map((kind) =>
   Array.from({ length: TREES.shapes }, (_, k) => {
     const f = new THREE.InstancedMesh(buildTree(kind, k, treeLook), treeMat, MAX_TREES);
+    f.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     f.setColorAt(0, new THREE.Color(1, 1, 1)); // the per-tree tints, there from the first frame
     f.frustumCulled = false;
     f.castShadow = true;
@@ -5039,6 +5056,7 @@ function updateScenery() {
           liveTrees.push(t);
         }
   for (const f of treeFields.flat()) {
+    f.instanceMatrix.clearUpdateRanges();
     f.instanceMatrix.needsUpdate = true;
     f.instanceColor.needsUpdate = true;
   }
@@ -5209,20 +5227,24 @@ function stepTrees(delta) {
     const rr = (dy < 0.7 * st.s ? S.r : S.shaftR) * st.s + BIRD_R;
     const dx = player.position.x - st.x,
       dz = player.position.z - st.z,
-      d = Math.hypot(dx, dz);
-    if (d < rr && d > 0) {
+      distanceSq = dx * dx + dz * dz;
+    if (distanceSq < rr * rr && distanceSq > 0) {
+      const d = Math.sqrt(distanceSq);
       player.position.x = st.x + (dx / d) * rr;
       player.position.z = st.z + (dz / d) * rr;
     }
   }
   for (const t of liveTrees) {
-    if (Math.hypot(player.position.x - t.x, player.position.z - t.z) > t.r + BIRD_R) continue;
+    const offsetX = t.x - player.position.x,
+      offsetZ = t.z - player.position.z,
+      reach = t.r + BIRD_R;
+    if (offsetX * offsetX + offsetZ * offsetZ > reach * reach) continue;
     if (!bumpTree(t)) continue;
     // A fresh shake, unless it's still swaying hard from the last one
     if (t.shake && Math.exp(-t.shake.age * TREE_SHAKE.settle) > 0.5) continue;
     const dx = t.x - player.position.x,
-      dz = t.z - player.position.z,
-      d = Math.hypot(dx, dz) || 1;
+      dz = t.z - player.position.z;
+    const d = Math.hypot(dx, dz) || 1;
     t.shake = { dx: dx / d, dz: dz / d, age: 0 };
     shaking.add(t);
   }
@@ -5235,6 +5257,7 @@ function stepTrees(delta) {
     }
     if (!liveTrees.includes(t)) continue; // streamed out: nothing to redraw
     t.f.setMatrixAt(t.slot, settled ? t.matrix : shakeMatrix(t));
+    t.f.instanceMatrix.addUpdateRange(t.slot * 16, 16);
     t.f.instanceMatrix.needsUpdate = true;
   }
 }
@@ -5439,7 +5462,6 @@ const partner = buildAlbatross({
   },
 });
 const { player: partnerRoot, body: partnerBody } = partner;
-partnerRoot.scale.multiplyScalar(0.82);
 const materialBases = new Map();
 const rememberAppearance = (material) => {
   if (materialBases.has(material)) return;
@@ -5524,6 +5546,11 @@ applyBirdGender = (gender) => {
   // companion role: males turn blue, females turn pink in either role.
   playerBirdGender = selectedBirdGender;
   companionBirdGender = playerBirdGender === "male" ? "female" : "male";
+  const playerSize = BIRD.size * (playerBirdGender === "male" ? MALE_BIRD_SIZE : 1);
+  const companionSize = BIRD.size * COMPANION_SIZE * (companionBirdGender === "male" ? MALE_BIRD_SIZE : 1);
+  player.scale.setScalar(playerSize);
+  partnerRoot.scale.setScalar(companionSize);
+  BIRD_R = 0.7 * playerSize;
   for (const pair of appearancePairs) {
     pair.playerMesh.material = selectedBirdGender === "female" ? pair.female : pair.male;
     pair.companionMesh.material = selectedBirdGender === "female" ? pair.male : pair.female;
