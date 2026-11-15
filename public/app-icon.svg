@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#334451" />
+      <stop offset="1" stop-color="#101820" />
+    </radialGradient>
+    <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#sky)" />
+  <g transform="translate(256 256) scale(.76)" fill="#f7f5ed" filter="url(#soft-glow)">
+    <path d="M10,-32 C70,-42 160,-30 232,-4 C236,0 237,6 232,10 C180,8 130,8 100,14 C60,20 28,14 10,6 Z" />
+    <path transform="scale(-1 1)" d="M10,-32 C70,-42 160,-30 232,-4 C236,0 237,6 232,10 C180,8 130,8 100,14 C60,20 28,14 10,6 Z" />
+    <path d="M4,70 C10,78 15,95 15,106 C8,110 -8,110 -15,106 C-15,95 -10,78 -4,70 Z" />
+    <path d="M0,-66 C8,-66 11,-56 10,-48 C15,-40 17,-20 15,0 C13,30 8,55 4,72 L-4,72 C-8,55 -13,30 -15,0 C-17,-20 -15,-40 -10,-48 C-11,-56 -8,-66 0,-66 Z" />
+    <path d="M3,-62 C3,-75 1.5,-88 0,-96 C-1.5,-88 -3,-75 -3,-62 Z" />
+  </g>
+  <g fill="#ffb5dc">
+    <path d="M96 154l6 17 17 6-17 6-6 17-6-17-17-6 17-6z" />
+    <path d="M411 322l5 13 13 5-13 5-5 13-5-13-13-5 13-5z" />
+  </g>
+</svg>

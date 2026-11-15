@@ -33,6 +33,7 @@ export default function RootLayout({ children }) {
         <base href="/albatross/" />
         <link rel="stylesheet" href="/albatross/fonts/google.css" />
         <link rel="stylesheet" href="/albatross/style.css" />
+        <link rel="apple-touch-icon" href="/app-icon.svg" />
         <script type="importmap" dangerouslySetInnerHTML={{ __html: JSON.stringify(importMap) }} />
       </head>
       <body>{children}</body>

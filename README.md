@@ -1,65 +1,77 @@
-# Albartross-SA (Salman Anik Version)
+# Albartross SA
 
-A Next.js App Router edition of the 3D **Albatross** flight & island exploration experience, built with Three.js, React 19, and Next.js 16.
+Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatross over a procedurally generated archipelago, explore its islands and weather, and fly near a glowing companion bird.
 
-**Live Demo:** https://albartross-sa.vercel.app
+**Live demo:** [albartross-sa.vercel.app](https://albartross-sa.vercel.app)
 
 ## Features
 
-- **Next.js App Router** (`app/page.js`, `app/layout.js`) mounting the interactive Three.js world
-- **Self-contained assets** in `public/albatross/` (Three.js, fonts, ambient & reactive audio, shaders/modules)
-- **Dynamic world**: islands with dense forests, tulip gardens, rivers, waterfalls, high-altitude clouds, sunset & moonlit lighting, large bird flocks, companion birds, and land wildlife herds
-- **Relaxation audio**: looped 5-minute relaxing soundtrack with danger/harsh SFX disabled
-- **Mobile-ready controls**: swipe steering, touch-and-hold speed boost, and compact bottom-left mini-map
+- **Free flight:** steer, climb, dive, boost, and look around while the bird glides continuously.
+- **Living archipelago:** generated islands, forests, flower meadows, mountain peaks, rivers, waterfalls, and changing coastlines.
+- **Sky and weather:** a day and night cycle, clouds, sun, moon, stars, rain, snow, wind, and selectable weather presets.
+- **Wildlife and scenery:** bird flocks, land animals, and animated stone heads and figures.
+- **Companion bird:** a smaller, fully white albatross with a soft glow and pink sparkles that fade as they drift from her body. Her position appears on the mini map. Use **Fly Together** when it appears, or follow her through the world.
+- **Rotating mini map:** shows nearby islands, rivers, waterfalls, the player, and the companion.
+- **Sound:** a looping soundtrack and environmental effects, with separate music and SFX switches and an **M** mute shortcut.
+- **Display settings:** choose Low, Medium, High, or Ultra graphics; fullscreen is available from the game screen.
+- **Additional views:** use the in-game tabs to open the Field, Heads, Pillars, Obelisks, Trees, Albatross, and Scene pages.
+- **Touch support:** swipe to steer and climb, and press and hold to boost.
+- **Installable and offline-ready:** after four minutes of mobile flight, an install option appears. The browser menu can install the same app at any time. The service worker saves the app shell and game resources as they load, so after the first online play the installed game can launch without a connection.
 
-## Upgrades from Original (Albartross-SA)
+## Controls
 
-| Area | Original | Albartross-SA | Upgrade |
-| :--- | :--- | :--- | :--- |
-| **Platform & Hosting** | Static local HTML/JS | Next.js 16 App Router + Vercel | Full-stack web app |
-| **Active Birds (`SkyFlocks`)** | 20 birds (20 flocks) | 96 birds (25 flocks) + Companion Bird (every 5m for 20s) | **+380%** birds |
-| **Active Land Animals (`LandLife`)** | 12 active (2–6 / island) | 60 active (8–17 / island) with herd walking | **+400%** active |
-| **Forest & Trees (`WOOD`)** | 18–36 / island (3–8 / clump) | 42–78 / island (5–11 / clump) | **+122%** trees |
-| **Garden Creeps & Flowers (`MEADOW`)** | 1,350–1,650 / clearing | 2,000–2,400 / clearing | **+47%** density |
-| **Cloud Altitude & Climb Pitch** | `-22..+21` relative, `0.45` rad | `52..100` sky altitude, `0.72` rad climb | **+60%** climb angle |
-| **Long-Distance Visibility** | `SIGHT 120`, fog `18–96` | `SIGHT 150`, fog `82.5–202.5`, brighter night/twilight | **+111%** view range |
-| **Weather Cycle Timer** | 15–45s (~30s avg) | 120s (2 minutes) | **+300%** duration |
-| **Music & Relaxation Audio** | Default `bgm.mp3` (`0.3` gain), thunder/stone SFX on | Custom looped relaxing YouTube track (`0.85` gain), danger SFX off | **+183%** music gain |
-| **Mobile Controls & HUD** | Desktop-first HUD | Touch-and-hold boost (`1.7×`), `55px` swipe reach, compact bottom-left mini-map, icon-only Settings | Mobile-optimized |
+| Input | Action |
+| --- | --- |
+| **A / D** or **Left / Right** | Turn |
+| **W / Up** | Climb |
+| **S / Down** | Dive |
+| **Hold Space** | Boost |
+| **Mouse drag** | Steer/look around, depending on the input area |
+| **Mouse wheel** | Change camera distance |
+| **Touch and drag** | Steer and climb |
+| **Touch and hold** | Boost |
+| **M** | Mute or unmute audio |
 
-## Requirements
+The bird keeps moving forward while flying. **Fly Together** is a manual companion action; she does not join automatically on a timer. Open **Settings** to view the weather forecast and presets, adjust time of day and weather, change graphics quality, and toggle music or sound effects.
 
-- Node.js 20.9 or newer and npm
+On iPhone or iPad, use **Share → Add to Home Screen** to install. On Android, use **Install app** in the browser menu or the in-game install option after four minutes of flight.
 
-## Getting Started
+## Run locally
+
+### Requirements
+
+- Node.js 20.9 or newer
+- npm
+
+### Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Or on Windows, double-click `start.bat` to automatically pick a free port, start Next.js, and open the game in your default browser.
+On Windows, you can also run `start.bat` to start the development server and open the game in a browser.
 
-### Production Build
+### Production
 
 ```bash
 npm run build
 npm run start
 ```
 
-## Controls
+## Project layout
 
-- **WASD** or **Arrow Keys**: steer, climb, and dive
-- **Space** (hold): fly faster
-- **Mouse drag**: look around
-- **Mouse wheel**: adjust camera distance
-- **M**: mute / unmute audio
-- **P**: toggle performance stats in the browser console
+- `app/page.js` mounts the existing game experience in the Next.js page.
+- `app/layout.js` provides the page metadata, styles, and Three.js import map.
+- `public/albatross/` contains the game interface, Three.js world, models, shaders, sound files, fonts, mini map, and additional views.
+- `public/sw.js` caches the app shell and same-origin game resources for offline launches.
+- `public/app-icon.svg` is the installable app icon.
+- `scripts/run-next.mjs` starts the local development server on an available port.
+- `next.config.mjs` contains the Next.js configuration.
+- `start.bat` is the Windows development launcher.
 
-## Project Structure
+The app uses Next.js App Router, React, and Three.js. The game itself and its assets are served from `public/albatross/`.
 
-- `app/page.js` & `app/layout.js` — Next.js App Router entry point and layout
-- `public/albatross/` — Three.js game engine, modules, fonts, sounds, and assets
-- `scripts/run-next.mjs` — local launcher with free-port selection
-- `next.config.mjs` — Next.js configuration
-- `start.bat` — Windows quick launcher
+## Credits
+
+Inspired by [Anokhee Jandhyala](https://anokhee.dev) and recreated by [Salman Anik](https://salmananik.vercel.app/).

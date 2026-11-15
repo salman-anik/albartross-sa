@@ -497,3 +497,15 @@ body.lab #tabs a.active { background: var(--lab-ink); color: var(--lab-bg); }
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 119, 176, 0.25);
 }
 #fly-together-btn[hidden] { display: none; }
+#offline-install-prompt {
+  position: fixed; left: 50%; bottom: max(74px, env(safe-area-inset-bottom, 0px) + 68px); transform: translateX(-50%);
+  z-index: 14; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box;
+  padding: 8px 12px; border: 1px solid rgba(230,223,204,.24); border-radius: 14px;
+  background: rgba(14,17,24,.86); color: #f3eee3; text-align: center; font: 12px/1.4 var(--ui);
+  backdrop-filter: blur(10px); box-shadow: 0 8px 28px rgba(0,0,0,.3);
+}
+#offline-install-button {
+  border: 0; border-radius: 999px; padding: 8px 14px; background: #e8eee9; color: #17201d;
+  font: 600 13px/1.2 var(--ui); cursor: pointer;
+}
+#offline-install-prompt p { max-width: 300px; margin: 8px 2px 1px; color: rgba(243,238,227,.82); }

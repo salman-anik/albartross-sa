@@ -81,13 +81,15 @@ export class WorldMap {
       ctx.save();
       ctx.translate(mx, my);
       ctx.rotate(Math.atan2(rx, -rz));
+      ctx.shadowColor = "rgba(255, 255, 255, .95)";
+      ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.moveTo(0, -6); ctx.lineTo(4.2, 4.5); ctx.lineTo(0, 2); ctx.lineTo(-4.2, 4.5);
+      ctx.moveTo(0, -7); ctx.lineTo(4.8, 5); ctx.lineTo(0, 2.5); ctx.lineTo(-4.8, 5);
       ctx.closePath();
-      ctx.fillStyle = "#ff8fb8";
+      ctx.fillStyle = "#ffffff";
       ctx.fill();
-      ctx.strokeStyle = "#fff0f6";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#cde9ff";
+      ctx.lineWidth = 1.25;
       ctx.stroke();
       ctx.restore();
     }
