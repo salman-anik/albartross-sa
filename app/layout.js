@@ -1,6 +1,9 @@
 export const metadata = {
   title: "Albartross SA",
   description: "A lone albatross makes first contact with a strange place.",
+  verification: {
+    google: "an8rV3cmmY3A4FEYYgX4TbErkZP5C_EiZTJ_-p4waC4",
+  },
   icons: { icon: "/albatross/favicon.svg" },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
