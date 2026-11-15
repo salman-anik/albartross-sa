@@ -215,12 +215,8 @@ document.body.appendChild(renderer.domElement);
 // to see. Off: the screen's own ratio, up to 2, always
 const QUALITY = {
   on: false, // the settings' "allow low battery mode" switch: off (as it starts), the screen's own ratio always; on, eased down a little when the frames slow
-  // Best first, never under three quarters of the screen's own (on a retina
-  // screen, 1.5 of its 2: under that it goes soft; it went to 0.85 once, and blurred)
-  ratios: (() => {
-    const top = Math.min(devicePixelRatio, 2);
-    return [...new Set([top, 1.75, 1.5, 1.25, 1].filter((r) => r <= top && r >= top * 0.75))];
-  })(),
+  // Filled from the selected graphics preset, so adaptive quality only steps down.
+  ratios: [],
   slow: 1 / 40, // seconds a frame, on average, past which a window counts as slow (under 40 fps; a browser saving power holds frames to 30, and that alone shouldn't blur it all the way)
   fast: 1 / 52, // ...and under which it counts as running well (over 52 fps)
   window: 2, // seconds averaged
@@ -709,6 +705,7 @@ function addSnow(mat, slope = SNOW.slope) {
   mat.customProgramCacheKey = () => prevKey() + `-snow${slope.join(",")}`;
 }
 const RAIN_GREY = new THREE.Color(RAIN.grey[0]);
+const rainTint = new THREE.Color();
 // The foam's colour by the hour (the foam sheet itself is built with the
 // sea, further down, and reads this uniform)
 const foamColor = { value: new THREE.Color(0xf2f7fb) };
@@ -720,7 +717,7 @@ function setDaylight(t) {
   const { moonUp, keyFade } = placeSky(daylight);
   blendColor(scene.background, "sky", daylight, LAB_PALETTE.sky, LAB_PALETTE.water); // the night sky: the water, darkened
   const wet = Math.max(RAIN.amount, SNOW.sky * SNOW.amount); // rain, or snow (a lighter grey)
-  if (wet > 0) scene.background.lerp(RAIN_GREY.clone().multiplyScalar(0.25 + 0.75 * daylight), RAIN.grey[1] * wet); // greyed by the rain (a darker grey by night)
+  if (wet > 0) scene.background.lerp(rainTint.copy(RAIN_GREY).multiplyScalar(0.25 + 0.75 * daylight), RAIN.grey[1] * wet); // greyed by the rain (a darker grey by night)
   if (RAIN.flash > 0) scene.background.lerp(MIST_WHITE, RAIN.lightning.sky * RAIN.flash); // lit up by the lightning
   scene.fog.color.copy(scene.background);
   skyShell.material.color.copy(scene.fog.color);
@@ -1195,6 +1192,12 @@ const graphicsLevels = {
 };
 function setGraphics(level, save = true) {
   const preset = graphicsLevels[level] ?? graphicsLevels.low;
+  QUALITY.ratios = [...new Set([
+    preset.ratio,
+    Math.max(0.5, preset.ratio * 0.85),
+    Math.max(0.5, preset.ratio * 0.7),
+  ])];
+  quality.level = quality.t = quality.frames = quality.good = quality.slow = 0;
   renderer.setPixelRatio(preset.ratio);
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = preset.shadows;

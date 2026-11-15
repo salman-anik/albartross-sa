@@ -13,7 +13,7 @@ Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatr
 - **Companion bird:** a smaller, fully white albatross with a soft glow and pink sparkles that fade as they drift from her body. Her position appears on the mini map. Use **Fly Together** when it appears, or follow her through the world.
 - **Rotating mini map:** shows nearby islands, rivers, waterfalls, the player, and the companion.
 - **Sound:** a looping soundtrack and environmental effects, with separate music and SFX switches and an **M** mute shortcut.
-- **Display settings:** choose Low, Medium, High, or Ultra graphics; fullscreen is available from the game screen.
+- **Display settings:** choose Low, Medium, High, or Ultra graphics; optional low battery mode can lower resolution when frames slow, but never raises it above the selected preset. Fullscreen is available from the game screen.
 - **Additional views:** use the in-game tabs to open the Field, Heads, Pillars, Obelisks, Trees, Albatross, and Scene pages.
 - **Touch support:** swipe to steer and climb, and press and hold to boost.
 - **Installable and offline-ready:** after four minutes of mobile flight, an install option appears. The browser menu can install the same app at any time. The service worker saves the app shell and game resources as they load, so after the first online play the installed game can launch without a connection.
