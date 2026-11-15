@@ -86,6 +86,13 @@
       </p>
       <p class="keys keys-touch">Drag to fly</p>
       <!-- The byline, at the foot of the screen: goes with it on "fly" -->
+      <div class="bird-choice" role="group" aria-label="Choose your bird">
+        <span>Choose your bird</span>
+        <div class="bird-choice-options">
+          <button type="button" data-bird-gender="male" aria-pressed="true">Male</button>
+          <button type="button" data-bird-gender="female" aria-pressed="false">Female</button>
+        </div>
+      </div>
       <div class="foot">
         <p class="byline">Inspired by <a href="https://anokhee.dev" target="_blank" rel="noopener">Anokhee Jandhyala</a> · recreated by <a href="https://salmananik.vercel.app/" target="_blank" rel="noopener">Salman Anik</a></p>
       </div>
@@ -260,6 +267,11 @@
           ><span class="cd" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M10.3 2.5h3.4l.5 2.6a7.6 7.6 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a7.7 7.7 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.6 7.6 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.6 7.6 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a7.7 7.7 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.6 7.6 0 0 1 1.9-1.1z" /><circle cx="12" cy="12" r="3" /></svg></span></button>
       </div>
       <div id="credits-panel" class="popover" hidden>
+        <label class="gender-setting">Your bird
+          <select id="bird-gender" aria-label="Your bird">
+            <option value="male">Male</option><option value="female">Female</option>
+          </select>
+        </label>
         <div class="setting-switches">
           <label class="switch" title="on a low battery, ease the resolution down a little when the frames slow; off, always full resolution"
             ><input id="low-battery-on" type="checkbox" /><span>low battery mode</span></label
@@ -281,6 +293,38 @@
         </div>
       </div>
     </div>
+    <script>
+      {
+        const storageKey = "albatross-gender";
+        const choiceButtons = [...document.querySelectorAll("[data-bird-gender]")];
+        const genderSelect = document.getElementById("bird-gender");
+        let gender = "male";
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (saved === "male" || saved === "female") gender = saved;
+        } catch {}
+
+        window.syncBirdGender = (nextGender) => {
+          gender = nextGender === "female" ? "female" : "male";
+          for (const button of choiceButtons) {
+            const selected = button.dataset.birdGender === gender;
+            button.classList.toggle("selected", selected);
+            button.setAttribute("aria-pressed", String(selected));
+          }
+          if (genderSelect) genderSelect.value = gender;
+        };
+
+        const chooseGender = (nextGender) => {
+          window.syncBirdGender(nextGender);
+          try { localStorage.setItem(storageKey, gender); } catch {}
+          window.dispatchEvent(new CustomEvent("albatross:gender-change", { detail: { gender } }));
+        };
+        for (const button of choiceButtons)
+          button.addEventListener("click", () => chooseGender(button.dataset.birdGender));
+        genderSelect?.addEventListener("change", () => chooseGender(genderSelect.value));
+        window.syncBirdGender(gender);
+      }
+    </script>
     <script type="module" src="main.field.js"></script>
   </body>
 </html>

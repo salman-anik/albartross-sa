@@ -241,6 +241,15 @@ canvas:active { cursor: grabbing; }
 #loading.ready .loading-bar:hover .bar-fill { background: #3f7d69; filter: none; }
 #loading.ready .loading-bar:hover #loading-status { color: #eef3ec; }
 #loading.ready .loading-bar:focus-visible { outline: 2px solid rgba(230, 223, 204, 0.6); outline-offset: 2px; }
+.bird-choice { display: flex; align-items: center; gap: 12px; color: #aab4cc; font-size: 12px; }
+.bird-choice-options { display: flex; gap: 5px; }
+.bird-choice button {
+  border: 1px solid rgba(224, 218, 201, 0.28); border-radius: 999px; padding: 5px 12px;
+  background: rgba(14, 17, 24, 0.42); color: #c9cfdd; font: inherit; cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.bird-choice button:hover, .bird-choice button:focus-visible { border-color: rgba(143, 202, 180, 0.8); outline: none; }
+.bird-choice button.selected { border-color: #6fb39b; background: rgba(63, 125, 105, 0.28); color: #eef3ec; }
 /* The keys, under the bar (index.html .keys): a quiet caption, the arrows
    drawn as keycaps, in line */
 #loading .keys { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; color: #8f9bb8; font-size: 13px; opacity: 0.6; }
@@ -481,6 +490,9 @@ body.lab #tabs a.active { background: var(--lab-ink); color: var(--lab-bg); }
 .graphics-setting select { color: var(--ink); font: inherit; border: 1px solid rgba(230,223,204,.18); border-radius: 7px; background: rgba(230,223,204,.07); padding: 5px 8px; cursor: pointer; }
 .graphics-setting select:hover { background: rgba(230,223,204,.13); }
 .graphics-setting { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; color: var(--mute); font: 12px/1.4 var(--ui); }
+.gender-setting { display: flex; align-items: center; justify-content: space-between; color: var(--mute); font: 12px/1.4 var(--ui); }
+.gender-setting select { color: var(--ink); font: inherit; border: 1px solid rgba(230,223,204,.18); border-radius: 7px; background: rgba(230,223,204,.07); padding: 5px 8px; cursor: pointer; }
+.gender-setting select:hover { background: rgba(230,223,204,.13); }
 #mini-map-panel { position: fixed; z-index: 8; right: 24px; bottom: 24px; width: 180px; height: 180px; box-sizing: border-box; display: grid; place-items: center; padding: 8px; border: 1px solid rgba(230,223,204,.15); border-radius: 50%; background: rgba(14,17,24,.42); backdrop-filter: blur(4px); pointer-events: none; }
 #mini-map { display: block; width: 156px; height: 156px; margin: 0; border-radius: 50%; }
 @media (max-width: 600px), (hover: none) and (pointer: coarse) { #mini-map-panel { left: 12px; right: auto; bottom: 12px; width: 104px; height: 104px; padding: 5px; } #mini-map { width: 92px; height: 92px; } }

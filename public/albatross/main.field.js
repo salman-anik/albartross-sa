@@ -100,6 +100,18 @@ const loadingEl = document.getElementById("loading"),
   loadingBar = loadingEl?.querySelector(".loading-bar"),
   loadingPct = document.getElementById("loading-pct");
 let started = !loadingEl; // without a loading screen (another page), straight into it
+let selectedBirdGender = "male";
+try {
+  const savedGender = localStorage.getItem("albatross-gender");
+  if (savedGender === "male" || savedGender === "female") selectedBirdGender = savedGender;
+} catch {}
+let applyBirdGender = null;
+window.addEventListener("albatross:gender-change", (event) => {
+  const gender = event.detail?.gender;
+  if (gender !== "male" && gender !== "female") return;
+  selectedBirdGender = gender;
+  applyBirdGender?.(gender);
+});
 // The bar (index.html .loading-bar, drawn as the settings' bars are): filled
 // as far as `done`, 0 – 1, with the share beside it. The page's own script
 // (index.html) has already crept it a little way while this module was
@@ -5361,17 +5373,11 @@ const bird = buildAlbatross(BIRD);
 const { player, body } = bird; // player: its place and heading; body: its bank and pitch
 scene.add(player);
 const WING_BLUE = new THREE.Color(0x368dff);
+const COMPANION_PINK = new THREE.Color(0xff4f9d);
 const COLOR_TRANSFORM_SECONDS = 5 * 60;
 let flightEffectTime = 0;
-const playerWingInks = [];
-player.traverse((obj) => {
-  if (!obj.isMesh || !obj.material) return;
-  const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-  for (const material of materials) {
-    if (!material.userData?.albatrossOuterWingInk || !material.userData.albatrossWingInk) continue;
-    playerWingInks.push({ material, ink: material.userData.albatrossWingInk, base: material.userData.albatrossWingInk.clone() });
-  }
-});
+let playerMaterials = [];
+let playerWingInks = [];
 const playerWingFx = [];
 {
   const glowCanvas = document.createElement("canvas");
@@ -5434,22 +5440,103 @@ const partner = buildAlbatross({
 });
 const { player: partnerRoot, body: partnerBody } = partner;
 partnerRoot.scale.multiplyScalar(0.82);
-const companionMaterials = new Set();
-const companionWhite = new THREE.Color(0xffffff);
-const companionPink = new THREE.Color(0xff4f9d);
-partnerRoot.traverse((obj) => {
-  if (obj.isMesh && obj.material) {
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const m of mats) {
-      companionMaterials.add(m);
-      if (m.color) m.color.setHex(0xffffff);
-      if (m.emissive) {
-        m.emissive.setHex(0x000000);
-        m.emissiveIntensity = 0;
-      }
+const materialBases = new Map();
+const rememberAppearance = (material) => {
+  if (materialBases.has(material)) return;
+  materialBases.set(material, {
+    color: material.color?.clone() ?? null,
+    ink: material.userData?.albatrossWingInk?.clone() ?? null,
+    emissive: material.emissive?.clone() ?? null,
+    emissiveIntensity: material.emissiveIntensity ?? 0,
+  });
+};
+const birdMeshes = (root) => {
+  const meshes = [];
+  root.traverse((obj) => {
+    if (obj.isMesh && obj.material) {
+      meshes.push(obj);
+      for (const material of Array.isArray(obj.material) ? obj.material : [obj.material]) rememberAppearance(material);
     }
+  });
+  return meshes;
+};
+const playerMeshes = birdMeshes(player);
+const companionMeshes = birdMeshes(partnerRoot);
+const appearancePairs = playerMeshes.length === companionMeshes.length
+  ? playerMeshes.map((playerMesh, i) => ({
+      playerMesh,
+      companionMesh: companionMeshes[i],
+      male: playerMesh.material,
+      female: companionMeshes[i].material,
+    }))
+  : [];
+if (!appearancePairs.length) console.warn("The bird appearance swap could not match the two bird models.");
+const restoreAppearance = (root) => {
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    for (const material of Array.isArray(obj.material) ? obj.material : [obj.material]) {
+      const base = materialBases.get(material);
+      if (!base) continue;
+      if (base.color && material.color) material.color.copy(base.color);
+      if (base.ink && material.userData?.albatrossWingInk) material.userData.albatrossWingInk.copy(base.ink);
+      if (base.emissive && material.emissive) material.emissive.copy(base.emissive);
+      if (material.emissive) material.emissiveIntensity = base.emissiveIntensity;
+    }
+  });
+};
+const collectMaterials = (root) => {
+  const materials = [];
+  const seen = new Set();
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    for (const material of Array.isArray(obj.material) ? obj.material : [obj.material]) {
+      if (seen.has(material)) continue;
+      seen.add(material);
+      const base = materialBases.get(material)?.color;
+      if (base && material.color) materials.push({ material, base: base.clone() });
+    }
+  });
+  return materials;
+};
+const collectWingInks = (root) => {
+  const inks = [];
+  const seen = new Set();
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    for (const material of Array.isArray(obj.material) ? obj.material : [obj.material]) {
+      const ink = material.userData?.albatrossWingInk;
+      if (!ink || seen.has(material)) continue;
+      seen.add(material);
+      inks.push({ material, ink, base: ink.clone() });
+    }
+  });
+  return inks;
+};
+let companionMaterials = [];
+let companionWingInks = [];
+const playerEffectColor = new THREE.Color();
+const companionEffectColor = new THREE.Color();
+let playerBirdGender = selectedBirdGender;
+let companionBirdGender = playerBirdGender === "male" ? "female" : "male";
+applyBirdGender = (gender) => {
+  selectedBirdGender = gender === "female" ? "female" : "male";
+  // The transformation belongs to each bird's identity, not its player or
+  // companion role: males turn blue, females turn pink in either role.
+  playerBirdGender = selectedBirdGender;
+  companionBirdGender = playerBirdGender === "male" ? "female" : "male";
+  for (const pair of appearancePairs) {
+    pair.playerMesh.material = selectedBirdGender === "female" ? pair.female : pair.male;
+    pair.companionMesh.material = selectedBirdGender === "female" ? pair.male : pair.female;
   }
-});
+  restoreAppearance(player);
+  restoreAppearance(partnerRoot);
+  playerMaterials = collectMaterials(player);
+  playerWingInks = collectWingInks(player);
+  companionMaterials = collectMaterials(partnerRoot);
+  companionWingInks = collectWingInks(partnerRoot);
+  window.syncBirdGender?.(selectedBirdGender);
+};
+applyBirdGender(selectedBirdGender);
 const companionSparkles = [];
 let companionGlowSprite = null;
 {
@@ -5516,12 +5603,14 @@ scene.add(partnerRoot);
 const COMPANION_ORBIT_SPEED = 1.2;
 const COMPANION_ORBIT_TURNS = 2;
 const COMPANION_ORBIT_DURATION = (Math.PI * 2 * COMPANION_ORBIT_TURNS) / COMPANION_ORBIT_SPEED;
+const COMPANION_ORBIT_RADIUS = 18;
 const COMPANION_FOLLOW_DURATION = 60;
 const partnerState = {
   state: "roam",
   bloom: 0,
   orbitDirection: 1,
   orbitPhase: 0,
+  approachPhase: 0,
   formationSide: 1,
   flyStart: 0,
   roamMode: "near",
@@ -5534,23 +5623,21 @@ const partnerState = {
   goalTimer: 0,
 };
 const flyTogetherBtn = document.getElementById("fly-together-btn");
-function startFlyTogether(tNow) {
+function startFlyTogether() {
   const dx = partnerRoot.position.x - player.position.x;
   const dz = partnerRoot.position.z - player.position.z;
-  partnerState.orbitPhase = Math.atan2(dz, dx);
+  partnerState.approachPhase = Math.atan2(dz, dx);
   const lateral = dx * Math.cos(heading) - dz * Math.sin(heading);
   partnerState.formationSide = lateral >= 0 ? 1 : -1;
-  // Keep the orbit close and visible. The follower eases her onto this ring
-  // from her current position, so she never teleports into formation.
   partnerState.orbitDirection = Math.random() < 0.5 ? 1 : -1;
-  partnerState.flyStart = tNow;
-  partnerState.state = "fly";
-  partnerState.until = tNow + COMPANION_ORBIT_DURATION + COMPANION_FOLLOW_DURATION;
+  // Fly to the near edge of the orbit first. The companion keeps her current
+  // position and flies there at her own speed instead of snapping into range.
+  partnerState.state = "approach";
   if (flyTogetherBtn) flyTogetherBtn.hidden = true;
 }
 flyTogetherBtn?.addEventListener("click", () => {
   if (!started) return;
-  startFlyTogether(clock.elapsedTime);
+  startFlyTogether();
 });
 const cloudDeck = new CloudDeck(scene, hash, GROUP.cell);
 const wildlife = new SkyFlocks(scene, SEED, groupAt, getHeight, 96);
@@ -5786,14 +5873,23 @@ renderer.setAnimationLoop(() => {
     const tNow = clock.elapsedTime;
     if (started) flightEffectTime += delta;
     const wingBloom = THREE.MathUtils.smoothstep(flightEffectTime, 0, COLOR_TRANSFORM_SECONDS);
-    for (const { material, ink, base } of playerWingInks) {
-      ink.copy(base).lerp(WING_BLUE, wingBloom);
-      if (material.emissive) {
-        material.emissive.copy(WING_BLUE);
-        material.emissiveIntensity = wingBloom * 0.34;
+    const playerIsFemale = playerBirdGender === "female";
+    const companionIsFemale = companionBirdGender === "female";
+    playerEffectColor.copy(playerIsFemale ? COMPANION_PINK : WING_BLUE);
+    companionEffectColor.copy(companionIsFemale ? COMPANION_PINK : WING_BLUE);
+    for (const { material, base } of playerMaterials) {
+      if (material.color) material.color.copy(base).lerp(COMPANION_PINK, playerIsFemale ? wingBloom : 0);
+      if (material.emissive && (playerIsFemale || material.userData?.albatrossOuterWingInk)) {
+        material.emissive.copy(playerEffectColor);
+        material.emissiveIntensity = wingBloom * (playerIsFemale ? 0.28 : 0.34);
       }
     }
+    for (const { material, ink, base } of playerWingInks) {
+      const changesColor = playerIsFemale || material.userData?.albatrossOuterWingInk;
+      ink.copy(base).lerp(playerIsFemale ? COMPANION_PINK : WING_BLUE, changesColor ? wingBloom : 0);
+    }
     for (const fx of playerWingFx) {
+      fx.glow.material.color.copy(playerEffectColor);
       fx.glow.material.opacity = wingBloom * 0.62;
       const glowSize = 1.5 + wingBloom * 1.2;
       fx.glow.scale.set(glowSize, glowSize, 1);
@@ -5802,6 +5898,7 @@ renderer.setAnimationLoop(() => {
         const phase = (tNow * 0.7 + sparkle.phase) % 1;
         const fade = Math.sin(Math.PI * phase) ** 2;
         const reveal = THREE.MathUtils.smoothstep(wingBloom, i * 0.22, i * 0.22 + 0.42);
+        sparkle.material.color.copy(playerEffectColor);
         sparkle.material.opacity = fade * wingBloom * reveal * 0.9;
         sparkle.sprite.position.set(
           sparkle.x + Math.sin(tNow * 2 + sparkle.phase * 5) * 0.05,
@@ -5813,16 +5910,20 @@ renderer.setAnimationLoop(() => {
     }
     partnerState.bloom = wingBloom;
     const bloom = wingBloom;
-    for (const material of companionMaterials) {
-      if (material.color) material.color.copy(companionWhite).lerp(companionPink, bloom);
-      if (material.emissive) {
-        material.emissive.copy(companionPink);
-        material.emissiveIntensity = bloom * 0.42;
+    for (const { material, base } of companionMaterials) {
+      if (material.color) material.color.copy(base).lerp(COMPANION_PINK, companionIsFemale ? bloom : 0);
+      if (material.emissive && (companionIsFemale || material.userData?.albatrossOuterWingInk)) {
+        material.emissive.copy(companionEffectColor);
+        material.emissiveIntensity = bloom * (companionIsFemale ? 0.42 : 0.34);
       }
     }
+    for (const { material, ink, base } of companionWingInks) {
+      const changesColor = companionIsFemale || material.userData?.albatrossOuterWingInk;
+      ink.copy(base).lerp(companionIsFemale ? COMPANION_PINK : WING_BLUE, changesColor ? bloom : 0);
+    }
     if (companionGlowSprite) {
-      companionGlowSprite.material.color.copy(companionWhite).lerp(companionPink, bloom);
-      companionGlowSprite.material.opacity = 0.22 + bloom * 0.72;
+      companionGlowSprite.material.color.copy(companionEffectColor);
+      companionGlowSprite.material.opacity = (companionIsFemale ? 0.22 : 0.08) + bloom * (companionIsFemale ? 0.72 : 0.62);
       const glowScale = 4.6 + bloom * 3.0;
       companionGlowSprite.scale.set(glowScale, glowScale, 1);
     }
@@ -5831,7 +5932,7 @@ renderer.setAnimationLoop(() => {
       const phase = (tNow * (0.65 + bloom * 0.5) + sparkle.phase) % 1;
       const fade = Math.sin(Math.PI * phase) ** 2;
       const reveal = THREE.MathUtils.smoothstep(bloom, (i / companionSparkles.length) * 0.78, (i / companionSparkles.length) * 0.78 + 0.22);
-      sparkle.material.color.copy(companionWhite).lerp(companionPink, bloom);
+      sparkle.material.color.copy(companionEffectColor);
       sparkle.material.opacity = fade * bloom * reveal;
       sparkle.sprite.position.set(
         sparkle.x + Math.sin(tNow * 2.4 + sparkle.phase * 8) * 0.06,
@@ -5844,6 +5945,43 @@ renderer.setAnimationLoop(() => {
     const dyP = partnerRoot.position.y - player.position.y;
     const dzP = partnerRoot.position.z - player.position.z;
     const distToPlayer = Math.hypot(dxP, dyP, dzP);
+
+    if (partnerState.state === "approach") {
+      const phase = partnerState.approachPhase;
+      const targetX = player.position.x + Math.cos(phase) * COMPANION_ORBIT_RADIUS;
+      const targetZ = player.position.z + Math.sin(phase) * COMPANION_ORBIT_RADIUS;
+      const targetFloor = Math.max(getHeight(targetX, targetZ), WATER_Y) + 6;
+      const targetY = Math.max(player.position.y + 4 + Math.sin(phase * 2) * 1.6, targetFloor);
+      const dx = targetX - partnerRoot.position.x;
+      const dy = targetY - partnerRoot.position.y;
+      const dz = targetZ - partnerRoot.position.z;
+      const joinDistance = Math.hypot(dx, dy, dz);
+      if (joinDistance < 3.5) {
+        // Begin the orbit only once she has flown into its starting point.
+        partnerState.orbitPhase = phase;
+        partnerState.flyStart = tNow;
+        partnerState.until = tNow + COMPANION_ORBIT_DURATION + COMPANION_FOLLOW_DURATION;
+        partnerState.state = "fly";
+      } else {
+        const wantYaw = Math.atan2(dx, dz);
+        const turnDelta = wrapAngle(wantYaw - partnerState.yaw);
+        partnerState.yaw += turnDelta * Math.min(1, delta * 1.35);
+        const wantPitch = THREE.MathUtils.clamp(dy * 0.035, -0.35, 0.4);
+        partnerState.pitch += (wantPitch - partnerState.pitch) * Math.min(1, delta * 1.6);
+        // Give her enough speed to catch a moving player; the gradual turn and
+        // flight path keep the approach natural, without snapping to the orbit.
+        const joinSpeed = Math.max(16, speed * 1.15);
+        partnerRoot.position.x += Math.sin(partnerState.yaw) * Math.cos(partnerState.pitch) * joinSpeed * delta;
+        partnerRoot.position.y += Math.sin(partnerState.pitch) * joinSpeed * delta;
+        partnerRoot.position.z += Math.cos(partnerState.yaw) * Math.cos(partnerState.pitch) * joinSpeed * delta;
+        const pFloor = Math.max(getHeight(partnerRoot.position.x, partnerRoot.position.z), WATER_Y) + 3;
+        if (partnerRoot.position.y < pFloor) partnerRoot.position.y = pFloor;
+        partnerRoot.rotation.y = partnerState.yaw;
+        partnerBody.rotation.z = THREE.MathUtils.clamp(-turnDelta * 0.65, -0.55, 0.55);
+        partnerBody.rotation.x = -partnerState.pitch * 0.7;
+        partner.beat(delta, Math.max(0.28, partnerState.pitch + 0.35));
+      }
+    }
 
     if (partnerState.state === "roam") {
       partnerState.goalTimer -= delta;
@@ -5926,7 +6064,7 @@ renderer.setAnimationLoop(() => {
         const elapsed = tNow - partnerState.flyStart;
         const orbitElapsed = Math.min(elapsed, COMPANION_ORBIT_DURATION);
         const orbit = partnerState.orbitPhase + orbitElapsed * COMPANION_ORBIT_SPEED * partnerState.orbitDirection;
-        const radius = 13 + Math.sin(orbitElapsed * 1.8) * 0.8;
+        const radius = COMPANION_ORBIT_RADIUS + Math.sin(orbitElapsed * 1.8) * 0.8;
         const circleX = player.position.x + Math.cos(orbit) * radius;
         const circleZ = player.position.z + Math.sin(orbit) * radius;
         const circleFloor = Math.max(getHeight(circleX, circleZ), WATER_Y) + 6;
