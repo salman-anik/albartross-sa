@@ -97,7 +97,6 @@ const USE = { variants: NATURE_MODE ? 4 : matchMedia("(hover: none) and (pointer
 // flies, and the day stands still, until "fly" is pressed (started).
 const loadingEl = document.getElementById("loading"),
   loadingStatus = document.getElementById("loading-status"),
-  loadingLine = document.getElementById("loading-line"),
   loadingBar = loadingEl?.querySelector(".loading-bar"),
   loadingPct = document.getElementById("loading-pct");
 let started = !loadingEl; // without a loading screen (another page), straight into it
@@ -114,24 +113,7 @@ const paintLoading = (done) => {
   loadingBar.setAttribute("aria-valuenow", p);
   if (loadingPct) loadingPct.textContent = `${p}%`;
 };
-// What the line over the bar says while it fills: the bird's thoughts, one after another,
-// spread over the whole build so the last lands just before "Play". The
-// first is already up in index.html while this module is fetched
-const LOADING_LINES = [
-  "The wind is steady.",
-  "It feels nice.",
-  "My heart is heavy.",
-  "I haven't touched the ground in three hundred days.",
-  "I glide and glide.",
-  "I embrace the crosswind.",
-  "I'm not scared of anything.",
-  "I can smell the island now.",
-  "I haven't seen him in so long.",
-  "I wonder if he'll recognize me.",
-];
 const loading = async (msg, done = 0) => {
-  const p = woke + done * (1 - woke);
-  if (loadingLine) loadingLine.textContent = LOADING_LINES[Math.min(LOADING_LINES.length - 1, Math.floor(p * LOADING_LINES.length))];
   paintLoading(done);
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 };
@@ -1235,21 +1217,6 @@ if (graphicsBox) graphicsBox.addEventListener("change", () => {
   if (batteryBox) batteryBox.checked = false;
   setGraphics(graphicsBox.value);
 });
-// "Dev tools": the tabs to the labs, hidden unless it is on (style.css body.dev); remembered
-const devBox = document.getElementById("dev-on");
-if (devBox) {
-  const setDev = (on) => document.body.classList.toggle("dev", on);
-  try {
-    devBox.checked = localStorage.getItem("dev-tools") === "1";
-  } catch {}
-  setDev(devBox.checked);
-  devBox.addEventListener("change", () => {
-    setDev(devBox.checked);
-    try {
-      localStorage.setItem("dev-tools", devBox.checked ? "1" : "0");
-    } catch {}
-  });
-}
 // The weather icons: line drawings in the panel's colour, 64 units square
 const WX_SVG = (body) => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 const WX_CLOUD = '<path d="M20 40h26a9 9 0 0 0 0-18 13 13 0 0 0-25-3 10 10 0 0 0-1 21z"/>';

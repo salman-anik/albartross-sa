@@ -284,13 +284,11 @@ canvas { touch-action: none; user-select: none; -webkit-user-select: none; -webk
 @media (max-width: 720px) {
   #tabs { display: none; }
 }
-/* On the field, only with the settings' "dev tools" on (main.field.js);
-   the labs keep theirs. On, they show on any screen */
-body:not(.lab):not(.dev) #tabs { display: none; }
-body.dev #tabs { display: flex; }
+/* Keep the lab navigation hidden on the field page. */
+body:not(.lab) #tabs { display: none; }
 /* ...a desktop's alone: on a phone there is no switch, and no tabs even if it was left on */
 @media (hover: none) and (pointer: coarse) {
-  #dev-switch, body.dev #tabs { display: none; }
+  #tabs { display: none; }
 }
 
 /* ---------------------------------------------------------------------
