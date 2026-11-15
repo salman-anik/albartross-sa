@@ -5401,7 +5401,7 @@ const COLOR_TRANSFORM_SECONDS = 5 * 60;
 let flightEffectTime = 0;
 let playerMaterials = [];
 let playerWingInks = [];
-const playerWingFx = [];
+const maleWingFx = [];
 {
   const glowCanvas = document.createElement("canvas");
   glowCanvas.width = glowCanvas.height = 64;
@@ -5450,7 +5450,7 @@ const playerWingFx = [];
       wing.elbow.add(sprite);
       sparkles.push({ sprite, material, x, y, z, phase: i / 3 + (wing.side < 0 ? 0.5 : 0) });
     }
-    playerWingFx.push({ glow, sparkles, phase: wing.side < 0 ? Math.PI : 0 });
+    maleWingFx.push({ glow, sparkles, phase: wing.side < 0 ? Math.PI : 0 });
   }
 }
 const partner = buildAlbatross({
@@ -5536,10 +5536,9 @@ const collectWingInks = (root) => {
 };
 let companionMaterials = [];
 let companionWingInks = [];
-const playerEffectColor = new THREE.Color();
-const companionEffectColor = new THREE.Color();
 let playerBirdGender = selectedBirdGender;
 let companionBirdGender = playerBirdGender === "male" ? "female" : "male";
+let syncGenderEffects = null;
 applyBirdGender = (gender) => {
   selectedBirdGender = gender === "female" ? "female" : "male";
   // The transformation belongs to each bird's identity, not its player or
@@ -5561,11 +5560,12 @@ applyBirdGender = (gender) => {
   playerWingInks = collectWingInks(player);
   companionMaterials = collectMaterials(partnerRoot);
   companionWingInks = collectWingInks(partnerRoot);
+  syncGenderEffects?.();
   window.syncBirdGender?.(selectedBirdGender);
 };
 applyBirdGender(selectedBirdGender);
-const companionSparkles = [];
-let companionGlowSprite = null;
+const femaleBodySparkles = [];
+let femaleGlowSprite = null;
 {
   const gCanvas = document.createElement("canvas");
   gCanvas.width = gCanvas.height = 128;
@@ -5577,7 +5577,7 @@ let companionGlowSprite = null;
   gCtx.fillStyle = grad;
   gCtx.fillRect(0, 0, 128, 128);
   const glowTex = new THREE.CanvasTexture(gCanvas);
-  companionGlowSprite = new THREE.Sprite(
+  femaleGlowSprite = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: glowTex,
       color: 0xffffff,
@@ -5588,12 +5588,11 @@ let companionGlowSprite = null;
       fog: false,
     }),
   );
-  companionGlowSprite.scale.set(4.2, 4.2, 1);
-  companionGlowSprite.material.opacity = 0.12;
-  companionGlowSprite.renderOrder = 2;
-  partnerBody.add(companionGlowSprite);
+  femaleGlowSprite.scale.set(4.2, 4.2, 1);
+  femaleGlowSprite.material.opacity = 0.12;
+  femaleGlowSprite.renderOrder = 2;
 
-  // A handful of tiny, low-cost sparkles drift up from her body and fade out.
+  // A handful of tiny, low-cost sparkles drift up from the female bird's body.
   const sparkCanvas = document.createElement("canvas");
   sparkCanvas.width = sparkCanvas.height = 32;
   const sparkCtx = sparkCanvas.getContext("2d");
@@ -5620,10 +5619,28 @@ let companionGlowSprite = null;
     const z = Math.sin(angle) * 0.32;
     sprite.position.set(x, y, z);
     sprite.scale.setScalar(0.13);
-    partnerBody.add(sprite);
-    companionSparkles.push({ sprite, x, y, z, phase: i / 8, material });
+    femaleBodySparkles.push({ sprite, x, y, z, phase: i / 8, material });
   }
 }
+const moveEffect = (effect, parent) => {
+  if (effect.parent === parent) return;
+  effect.parent?.remove(effect);
+  parent.add(effect);
+};
+syncGenderEffects = () => {
+  const maleWings = playerBirdGender === "male" ? bird.wings : partner.wings;
+  for (let i = 0; i < maleWingFx.length; i++) {
+    const fx = maleWingFx[i];
+    const elbow = maleWings[i]?.elbow;
+    if (!elbow) continue;
+    moveEffect(fx.glow, elbow);
+    for (const sparkle of fx.sparkles) moveEffect(sparkle.sprite, elbow);
+  }
+  const femaleBody = playerBirdGender === "female" ? body : partnerBody;
+  moveEffect(femaleGlowSprite, femaleBody);
+  for (const sparkle of femaleBodySparkles) moveEffect(sparkle.sprite, femaleBody);
+};
+syncGenderEffects();
 partnerRoot.position.set(player.position.x + 24, player.position.y + 8, player.position.z - 22);
 partnerRoot.visible = true;
 scene.add(partnerRoot);
@@ -5902,12 +5919,10 @@ renderer.setAnimationLoop(() => {
     const wingBloom = THREE.MathUtils.smoothstep(flightEffectTime, 0, COLOR_TRANSFORM_SECONDS);
     const playerIsFemale = playerBirdGender === "female";
     const companionIsFemale = companionBirdGender === "female";
-    playerEffectColor.copy(playerIsFemale ? COMPANION_PINK : WING_BLUE);
-    companionEffectColor.copy(companionIsFemale ? COMPANION_PINK : WING_BLUE);
     for (const { material, base } of playerMaterials) {
       if (material.color) material.color.copy(base).lerp(COMPANION_PINK, playerIsFemale ? wingBloom : 0);
       if (material.emissive && (playerIsFemale || material.userData?.albatrossOuterWingInk)) {
-        material.emissive.copy(playerEffectColor);
+        material.emissive.copy(playerIsFemale ? COMPANION_PINK : WING_BLUE);
         material.emissiveIntensity = wingBloom * (playerIsFemale ? 0.28 : 0.34);
       }
     }
@@ -5915,9 +5930,11 @@ renderer.setAnimationLoop(() => {
       const changesColor = playerIsFemale || material.userData?.albatrossOuterWingInk;
       ink.copy(base).lerp(playerIsFemale ? COMPANION_PINK : WING_BLUE, changesColor ? wingBloom : 0);
     }
-    for (const fx of playerWingFx) {
-      fx.glow.material.color.copy(playerEffectColor);
-      fx.glow.material.opacity = wingBloom * 0.62;
+    for (const fx of maleWingFx) {
+      fx.glow.material.color.copy(WING_BLUE);
+      // Keep the male's wing glow present from launch; the stronger bloom and
+      // sparkles still build over the same five-minute flight progression.
+      fx.glow.material.opacity = 0.18 + wingBloom * 0.44;
       const glowSize = 1.5 + wingBloom * 1.2;
       fx.glow.scale.set(glowSize, glowSize, 1);
       for (let i = 0; i < fx.sparkles.length; i++) {
@@ -5925,7 +5942,7 @@ renderer.setAnimationLoop(() => {
         const phase = (tNow * 0.7 + sparkle.phase) % 1;
         const fade = Math.sin(Math.PI * phase) ** 2;
         const reveal = THREE.MathUtils.smoothstep(wingBloom, i * 0.22, i * 0.22 + 0.42);
-        sparkle.material.color.copy(playerEffectColor);
+        sparkle.material.color.copy(WING_BLUE);
         sparkle.material.opacity = fade * wingBloom * reveal * 0.9;
         sparkle.sprite.position.set(
           sparkle.x + Math.sin(tNow * 2 + sparkle.phase * 5) * 0.05,
@@ -5940,7 +5957,7 @@ renderer.setAnimationLoop(() => {
     for (const { material, base } of companionMaterials) {
       if (material.color) material.color.copy(base).lerp(COMPANION_PINK, companionIsFemale ? bloom : 0);
       if (material.emissive && (companionIsFemale || material.userData?.albatrossOuterWingInk)) {
-        material.emissive.copy(companionEffectColor);
+        material.emissive.copy(companionIsFemale ? COMPANION_PINK : WING_BLUE);
         material.emissiveIntensity = bloom * (companionIsFemale ? 0.42 : 0.34);
       }
     }
@@ -5948,18 +5965,18 @@ renderer.setAnimationLoop(() => {
       const changesColor = companionIsFemale || material.userData?.albatrossOuterWingInk;
       ink.copy(base).lerp(companionIsFemale ? COMPANION_PINK : WING_BLUE, changesColor ? bloom : 0);
     }
-    if (companionGlowSprite) {
-      companionGlowSprite.material.color.copy(companionEffectColor);
-      companionGlowSprite.material.opacity = (companionIsFemale ? 0.22 : 0.08) + bloom * (companionIsFemale ? 0.72 : 0.62);
+    if (femaleGlowSprite) {
+      femaleGlowSprite.material.color.copy(COMPANION_PINK);
+      femaleGlowSprite.material.opacity = 0.22 + bloom * 0.72;
       const glowScale = 4.6 + bloom * 3.0;
-      companionGlowSprite.scale.set(glowScale, glowScale, 1);
+      femaleGlowSprite.scale.set(glowScale, glowScale, 1);
     }
-    for (let i = 0; i < companionSparkles.length; i++) {
-      const sparkle = companionSparkles[i];
+    for (let i = 0; i < femaleBodySparkles.length; i++) {
+      const sparkle = femaleBodySparkles[i];
       const phase = (tNow * (0.65 + bloom * 0.5) + sparkle.phase) % 1;
       const fade = Math.sin(Math.PI * phase) ** 2;
-      const reveal = THREE.MathUtils.smoothstep(bloom, (i / companionSparkles.length) * 0.78, (i / companionSparkles.length) * 0.78 + 0.22);
-      sparkle.material.color.copy(companionEffectColor);
+      const reveal = THREE.MathUtils.smoothstep(bloom, (i / femaleBodySparkles.length) * 0.78, (i / femaleBodySparkles.length) * 0.78 + 0.22);
+      sparkle.material.color.copy(COMPANION_PINK);
       sparkle.material.opacity = fade * bloom * reveal;
       sparkle.sprite.position.set(
         sparkle.x + Math.sin(tNow * 2.4 + sparkle.phase * 8) * 0.06,
