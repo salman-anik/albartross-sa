@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { FLAT, poolTexture } from "./flatlight.js"; // flat, crisp light on every standard material, and the lanterns' lamps and pools; the scene lab sets its numbers
+import { FLAT, poolTexture, setFlat } from "./flatlight.js";
 import { STRETCH_FROM, NECK_TAPER, buildHead, breakHead, mulberry32 } from "./heads.js";
 import {
   VARIANTS, variantHead, variantParams, RCX, RCZ, RING_R, BURY, MIN_STRETCH, hash as fixedHash, attachAttrs,
@@ -34,6 +34,9 @@ const hash = (x, z, seed) => fixedHash(x, z, seed + SEED);
 // over its defaults. The sky and the foam are the day's; the lab's stand
 // in at full day and tint the night (daylight.js)
 const LAB_PALETTE = savedPalette();
+// Keep smooth physically based lighting in the flight scene while preserving
+// the shared light controls for the optional scene lab.
+setFlat({ wrap: 0.08, bands: 0, edge: 0, soft: 0.18, shadow: 0, sky: 0, lamp: 0 });
 
 // =====================================================================
 // What the pillars lab has set
@@ -130,8 +133,7 @@ for (let v = 0; v < USE.variants; v++) {
 // =====================================================================
 // The landscape
 // =====================================================================
-// A deep blue-hour cast over the whole world, dark enough for stars to read
-// but not so dark that the cream heads and green hills lose their colour.
+// A neutral base; the sky, fog and sea colours follow the daylight cycle.
 const SKY = 0x0e1118;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY);
@@ -201,9 +203,12 @@ const camera = new THREE.PerspectiveCamera(
   3000, // the grass skirt runs out to the horizon
 );
 
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "low-power" });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "low-power" });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 0.75));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.15));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
@@ -273,13 +278,10 @@ scene.add(sun);
 // orthographic box; it's re-centred on the player every frame (snapped to
 // shadow texels so the shadows don't shimmer as the bird glides) and covers
 // the ground around the bird out to where the fog starts swallowing detail.
-// SHADOW_MAP sets the texel: 170 units across 4096 is 4 cm. At 2048 (8 cm)
-// the edge of a shadow on a head close by, a chin on its neck, stepped along
-// the texels, worst at night when the dark skylight leaves nothing to soften
-// it. (PCFSoftShadowMap blurs by a fixed couple of texels and ignores
-// sun.shadow.radius; finer texels are the only way to a finer edge.)
+// Shadow resolution follows the selected graphics preset, keeping the memory
+// cost modest while retaining soft contact shadows around the bird.
 const SHADOW_REACH = 85;
-const SHADOW_MAP = 4096;
+const SHADOW_MAP = 1024;
 sun.castShadow = true;
 sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
 sun.shadow.camera.left = sun.shadow.camera.bottom = -SHADOW_REACH;
@@ -287,12 +289,12 @@ sun.shadow.camera.right = sun.shadow.camera.top = SHADOW_REACH;
 sun.shadow.camera.near = 10;
 sun.shadow.camera.far = 260;
 sun.shadow.bias = -0.0006;
-sun.shadow.normalBias = 0.35;
-sun.shadow.radius = 3;
+sun.shadow.normalBias = 0.12;
+sun.shadow.radius = 4;
 scene.add(sun.target);
 const SUN_DIR = sun.position.clone().normalize(); // toward the light; aimKey moves it
 const SUN_DIST = 120;
-const shadowTexel = (SHADOW_REACH * 2) / sun.shadow.mapSize.x;
+let shadowTexel = (SHADOW_REACH * 2) / sun.shadow.mapSize.x;
 // The shadow camera's own right and up axes (it looks along -SUN_DIR with
 // world-up as its up hint). Snapping has to happen in this frame: a step in
 // world x or z is not a whole texel in the oblique shadow map, and a map that
@@ -335,10 +337,21 @@ const SKY_RADIUS = 430; // inside the camera's far plane
 // where the sea meets the sky at the horizon the two are the same pixel
 // value (the renderer's clear colour can land a shade off, and the join
 // shows as a line). Drawn first, under everything.
-const skyShell = new THREE.Mesh(
-  new THREE.SphereGeometry(2500, 24, 12), // inside the camera's far plane
-  new THREE.MeshBasicMaterial({ color: SKY, side: THREE.BackSide, fog: false, depthWrite: false }),
-);
+const skyMaterial = new THREE.MeshBasicMaterial({ color: SKY, side: THREE.BackSide, fog: false, depthWrite: false });
+skyMaterial.onBeforeCompile = (shader) => {
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", "#include <common>\nvarying vec3 vSkyDirection;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vSkyDirection = normalize(position);");
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <common>", "#include <common>\nvarying vec3 vSkyDirection;")
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      float skyElevation = max(normalize(vSkyDirection).y, 0.0);
+      float skyGradient = smoothstep(0.0, 0.82, skyElevation);
+      vec3 skyZenith = diffuseColor.rgb * 1.2 + vec3(0.008, 0.014, 0.018);
+      diffuseColor.rgb = mix(diffuseColor.rgb, skyZenith, skyGradient);`);
+};
+skyMaterial.customProgramCacheKey = () => "natural-sky-gradient-v1";
+const skyShell = new THREE.Mesh(new THREE.SphereGeometry(2500, 24, 12), skyMaterial); // inside the camera's far plane
 skyShell.renderOrder = -1;
 skyShell.frustumCulled = false;
 skyDome.add(skyShell);
@@ -739,14 +752,14 @@ function setDaylight(t) {
   moonHalo.material.opacity = (1 - dusk) * moonUp * (1 - wet);
   moon.material.opacity = (1 - 0.6 * dusk) * moonUp * (1 - wet);
 }
-// The day turns as the bird flies: night to day and back over DAY.period
-// seconds, starting at night. The slider shows where the day has got to,
+// The day turns as the bird flies: day to night and back over DAY.period
+// seconds, starting in the afternoon. The slider shows where the day has got to,
 // and dragging it sets the time of day; the cycle carries on from there.
 const DAY = {
   on: true, // false holds the slider's time of day
-  period: 240, // seconds a whole day and night takes
+  period: 360, // seconds a whole day and night takes
 };
-let dayT = DAY.period * 0.75; // begin at sunset, then keep the existing day/night cycle running
+let dayT = DAY.period * 0.6; // begin in early-afternoon light, then keep the day/night cycle running
 const dayAt = (t) => 0.5 - 0.5 * Math.cos((t / DAY.period) * Math.PI * 2);
 const daySlider = document.getElementById("daylight");
 // The violin (sounds.js SOUND.moments) as the day/night slider passes its
@@ -1188,10 +1201,10 @@ if (batteryBox) {
 }
 const graphicsBox = document.getElementById("graphics-quality");
 const graphicsLevels = {
-  low: { ratio: Math.min(0.75, devicePixelRatio), shadows: false, map: 512 },
-  medium: { ratio: Math.min(1.25, devicePixelRatio), shadows: true, map: 1024 },
-  high: { ratio: Math.min(1.75, devicePixelRatio), shadows: true, map: 2048 },
-  ultra: { ratio: Math.min(2, devicePixelRatio), shadows: true, map: 4096 },
+  low: { ratio: Math.min(0.75, devicePixelRatio), shadows: true, map: 512 },
+  medium: { ratio: Math.min(0.9, devicePixelRatio), shadows: true, map: 768 },
+  high: { ratio: Math.min(1.05, devicePixelRatio), shadows: true, map: 1024 },
+  ultra: { ratio: Math.min(1.25, devicePixelRatio), shadows: true, map: 1536 },
 };
 function setGraphics(level, save = true) {
   const preset = graphicsLevels[level] ?? graphicsLevels.low;
@@ -1199,6 +1212,7 @@ function setGraphics(level, save = true) {
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = preset.shadows;
   sun.shadow.mapSize.set(preset.map, preset.map);
+  shadowTexel = (SHADOW_REACH * 2) / preset.map;
   sun.shadow.map?.dispose();
   sun.shadow.map = null;
   sun.shadow.needsUpdate = true;
@@ -1206,10 +1220,10 @@ function setGraphics(level, save = true) {
   if (graphicsBox) graphicsBox.value = level in graphicsLevels ? level : "low";
   if (save) try { localStorage.setItem("albatross-graphics", level); } catch {}
 }
-let graphicsChoice = "low";
+let graphicsChoice = "high";
 try {
   const savedGraphics = localStorage.getItem("albatross-graphics");
-  graphicsChoice = savedGraphics === "medium" ? "low" : savedGraphics || "low";
+  graphicsChoice = savedGraphics || "high";
 } catch {}
 setGraphics(graphicsChoice, false);
 if (graphicsBox) graphicsBox.addEventListener("change", () => {
@@ -1619,10 +1633,33 @@ scene.add(skirt);
 // The sea: one sheet at WATER_Y out to the horizon, riding with the bird.
 // See-through, so the sand shows in the shallows off every shore, and glossy
 // enough to catch the moon or sun in a streak.
-const WATER = { color: LAB_PALETTE.water, roughness: 1, metalness: 0, opacity: 0.7 }; // matte: no shine, no mirror of the sky
+const WATER = { color: LAB_PALETTE.water, roughness: 0.24, metalness: 0, opacity: 0.88 };
+// A tiny repeating normal map gives the sea fine wind ripples without a large
+// downloaded texture or extra geometry.
+function makeSeaNormal() {
+  const size = 64, data = new Uint8Array(size * size * 4);
+  const height = (x, y) => {
+    const u = x * Math.PI * 2 / size, v = y * Math.PI * 2 / size;
+    return Math.sin(u * 3 + Math.sin(v * 2) * 0.7) * 0.55 + Math.sin(v * 5 + u * 1.4) * 0.3 + Math.sin(u * 9 - v * 7) * 0.15;
+  };
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const dx = (height(x + 1, y) - height(x - 1, y)) * 1.4;
+    const dy = (height(x, y + 1) - height(x, y - 1)) * 1.4;
+    const n = new THREE.Vector3(-dx, -dy, 1).normalize(), i = (y * size + x) * 4;
+    data[i] = Math.round((n.x * 0.5 + 0.5) * 255);
+    data[i + 1] = Math.round((n.y * 0.5 + 0.5) * 255);
+    data[i + 2] = Math.round((n.z * 0.5 + 0.5) * 255);
+    data[i + 3] = 255;
+  }
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(260, 260);
+  texture.needsUpdate = true;
+  return texture;
+}
 const water = new THREE.Mesh(
   new THREE.PlaneGeometry(8000, 8000).rotateX(-Math.PI / 2), // well past the camera's far plane, so its edge never shows against the clip
-  new THREE.MeshStandardMaterial({ color: WATER.color, roughness: WATER.roughness, metalness: WATER.metalness, transparent: true, opacity: WATER.opacity, depthWrite: false }),
+  new THREE.MeshPhysicalMaterial({ color: WATER.color, roughness: WATER.roughness, metalness: WATER.metalness, clearcoat: 0.58, clearcoatRoughness: 0.2, normalMap: makeSeaNormal(), normalScale: new THREE.Vector2(0.32, 0.32), transparent: true, opacity: WATER.opacity, depthWrite: false }),
 );
 water.position.y = WATER_Y;
 water.receiveShadow = true;
@@ -5813,6 +5850,7 @@ renderer.setAnimationLoop(() => {
   // The sky rides with the camera so stars and moon stay at infinity
   skyDome.position.copy(camera.position);
   cloudDeck.update(player, clock.elapsedTime, daylight, scene.background);
+  water.material.normalMap.offset.set(clock.elapsedTime * 0.0018, -clock.elapsedTime * 0.0011);
   starMat.uniforms.uTime.value = clock.elapsedTime;
 
   // The key light and its shadow box follow the bird; the mist drifts
@@ -5853,7 +5891,7 @@ function fly() {
 }
 if (loadingEl) {
   loadingEl.classList.add("ready");
-  loadingStatus.textContent = "Play";
+  loadingStatus.textContent = "Take flight";
   paintLoading(1);
   if (loadingPct) loadingPct.textContent = ""; // the bar is full: "Play" alone, centred (style.css #loading.ready)
   if (loadingBar) {

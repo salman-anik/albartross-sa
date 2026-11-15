@@ -7,7 +7,7 @@
 // and the field flies it (loadSavedAlbatross); "copy albatross" gives the
 // block to paste back here.
 import * as THREE from "three";
-import "./flatlight.js"; // flat, shine-free light (the field uses it too)
+import "./flatlight.js"; // shared physically based light shader support
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { hull, el, fmt } from "./heads.js";
 

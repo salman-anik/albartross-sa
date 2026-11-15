@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Albartross SA",
-  description: "A lone albatross makes first contact with a strange place.",
+  description: "Explore a quiet island world in a naturalistic albatross flight experience.",
   icons: { icon: "/albatross/favicon.svg" },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -16,7 +16,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#0e1118",
+  themeColor: "#172535",
 };
 
 const importMap = {
@@ -31,6 +31,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <base href="/albatross/" />
+        <meta name="google-site-verification" content="an8rV3cmmY3A4FEYYgX4TbErkZP5C_EiZTJ_-p4waC4" />
         <link rel="stylesheet" href="/albatross/fonts/google.css" />
         <link rel="stylesheet" href="/albatross/style.css" />
         <script type="importmap" dangerouslySetInnerHTML={{ __html: JSON.stringify(importMap) }} />

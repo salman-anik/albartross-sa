@@ -10,25 +10,25 @@ export const PALETTE = {
   // Sampled from the case study's camera-roll carousel (2026-10-16): the
   // dusk sea and sky, the Okunoin cedar path, the azalea park, the lit
   // house and the clay vessel
-  sky: 0xd9d5cc, // the dusk sky's pale warm grey
-  water: 0x495a74, // the sea under it; see-through: the sand and seabed show up through it
+  sky: 0xa9c7d1, // pale coastal daylight
+  water: 0x356775, // muted coastal blue-green
   foam: 0xe6e0d7, // the lace on the sea: the dusk sky, lifted; at night it takes a little of the water (daylight.js FOAM_DIM)
-  seabed: 0x5c5961, // the far mountains' slate
-  sand: 0xd9c9bc, // the white azaleas
-  ground: 0x70773f, // the grass: the park's green
-  earth: 0x4a270e, // the bare earth round the statues' feet: the wet bank below the lit house
-  splotch: 0x727b4c, // the pentagons on the grass: the cedars' moss
-  splotch2: 0x727b4c, // the small pentagons among them (beach.js SPLOTCH.small...)
-  stone: 0xc0bbb6, // the statues: the path's paving
+  seabed: 0x39494a,
+  sand: 0xc7b995,
+  ground: 0x526543,
+  earth: 0x604a35,
+  splotch: 0x526146,
+  splotch2: 0x45553f,
+  stone: 0x99978f,
   eyes: 0x121c26, // the vessel's case, near black
-  trees: 0x727b4c, // the canopy: the cedars' lit foliage (0x555036, their shaded green, was far too dark on the trees)
-  bark: 0x70614d, // the cedar trunks
+  trees: 0x506345,
+  bark: 0x554638,
   // The wildflowers: four petal colours, each cluster one of them, and one heart
-  flowers: 0xce829e, // the azaleas' pink
-  flowers2: 0xd2c4bc, // the dusk's pink
-  flowers3: 0xdea678, // the vessel's terracotta
-  flowers4: 0x9199b6, // the night's blue
-  hearts: 0xb68a4d, // the lit windows' amber
+  flowers: 0xb87872,
+  flowers2: 0xc9bca6,
+  flowers3: 0xc28c5b,
+  flowers4: 0x788d8c,
+  hearts: 0xb88a53,
 };
 export const FLOWER_KEYS = ["flowers", "flowers2", "flowers3", "flowers4"]; // the petal colours, in the palette's order
 // The palette as the lab last saved it, over the defaults for anything it

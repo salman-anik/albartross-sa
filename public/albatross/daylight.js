@@ -10,11 +10,11 @@ import * as THREE from "three";
 export const HOURS = [
   {
     at: 0, // night: clear moonlit indigo
-    sky: 0x1c273b,
-    hemiSky: 0x8ea0ba,
-    hemiGround: 0x2b3446,
-    hemiPower: 0.95,
-    sunColor: 0xf4ecd6,
+    sky: 0x172535,
+    hemiSky: 0x93a8bb,
+    hemiGround: 0x30383a,
+    hemiPower: 0.85,
+    sunColor: 0xe6dcc7,
     sunPower: 2.0,
     rimColor: 0x6f7d94,
     rimPower: 0.65,
@@ -22,9 +22,9 @@ export const HOURS = [
   },
   {
     at: 0.25, // twilight: the sky lifting to soft violet-blue
-    sky: 0x3b3d5e,
-    hemiSky: 0x8f8bb2,
-    hemiGround: 0x333047,
+    sky: 0x3d5368,
+    hemiSky: 0xa2b4c1,
+    hemiGround: 0x3b4140,
     hemiPower: 0.95,
     sunColor: 0xd4d6de, // still the moon
     sunPower: 1.5,
@@ -34,9 +34,9 @@ export const HOURS = [
   },
   {
     at: 0.5, // sunrise / sunset: low orange sun, peach sky, cool rim
-    sky: 0xe39a68,
-    hemiSky: 0xeab08a,
-    hemiGround: 0x44342c,
+    sky: 0xe3a37d,
+    hemiSky: 0xe9c3a1,
+    hemiGround: 0x51443a,
     hemiPower: 0.9,
     sunColor: 0xff9d52,
     sunPower: 2.1,
@@ -46,9 +46,9 @@ export const HOURS = [
   },
   {
     at: 1, // day: bright, pale morning light, kept soft: more skylight and a gentler sun, so shadows are mist-grey rather than cut (the ethereal look; 1.05 and 2.3 were the harder day)
-    sky: 0xebe6d6,
-    hemiSky: 0xf0ecdd,
-    hemiGround: 0x6b6a63,
+    sky: 0xa9c7d1,
+    hemiSky: 0xd5e3e4,
+    hemiGround: 0x6d7066,
     hemiPower: 1.3,
     sunColor: 0xfff3da,
     sunPower: 1.7,

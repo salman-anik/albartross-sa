@@ -217,15 +217,6 @@ canvas:active { cursor: grabbing; }
 #loading .loading-bar .bar-fill::after { width: 1px; background: rgba(224, 218, 201, 0.7); }
 /* No easing on the fill: the build gives the page one frame a step, the
    frame an easing would start in, so the fill sat a step behind the share */
-/* The bird's thoughts, over the bar: the title's face, smaller, breathing
-   while it builds; two lines' room held so a long one wrapping moves nothing */
-#loading .loading-line {
-  margin: -6px 0 0; max-width: min(600px, 94vw); min-height: 1.2em; display: flex; align-items: flex-start; justify-content: center; text-align: center; /* up under the title; wide enough that the longest line stays on one, wrapping only on a narrow phone */
-  font: italic 300 22px/1.2 "Cormorant Garamond", Garamond, Georgia, serif; color: #c9cfdd; /* italic: the bird's thoughts, set apart from the title in the same face */
-  will-change: opacity; animation: hum 2.2s ease-in-out infinite;
-}
-@keyframes hum { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } } /* dimmer than the title, which is whole: secondary */
-#loading.ready .loading-line { animation: none; opacity: 0.55; transition: opacity 0.25s; }
 @keyframes breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
 #loading.ready #loading-status { animation: none; opacity: 0.85; }
 /* Built: the share goes, and "Play" alone sits in the middle of the bar,
@@ -250,7 +241,7 @@ canvas:active { cursor: grabbing; }
    still, but for what is steered or tapped: no twinkling, no breathing
    words, no bowing wings (the clouds are held in index.html) */
 @media (prefers-reduced-motion: reduce) {
-  #loading .stars i, #loading-status, #loading .loading-line, #loading .bird .wing { animation: none !important; }
+  #loading .stars i, #loading-status, #loading .bird .wing { animation: none !important; }
 }
 @media (hover: none) and (pointer: coarse) {
   #loading .keys-mouse { display: none; }
@@ -497,3 +488,81 @@ body.lab #tabs a.active { background: var(--lab-ink); color: var(--lab-bg); }
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 119, 176, 0.25);
 }
 #fly-together-btn[hidden] { display: none; }
+
+/* Naturalistic field interface */
+:root { --ui: "Inter", "Segoe UI", system-ui, sans-serif; }
+#loading {
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(123, 153, 139, 0.24), transparent 42%),
+    linear-gradient(180deg, #111d27 0%, #243b42 50%, #667264 100%);
+  color: #f1eee3;
+}
+#loading .stars { opacity: 0.22; }
+#loading .clouds { opacity: 0.55; }
+#loading .clouds b { --cloud: radial-gradient(ellipse at 50% 50%, rgba(224, 225, 211, 0.34) 0 16%, transparent 68%); }
+#loading .title-kicker {
+  margin: 0 0 -8px;
+  color: rgba(236, 231, 211, 0.68);
+  font: 600 10px/1.4 var(--ui);
+  letter-spacing: 0.2em;
+}
+#loading h1 {
+  margin-bottom: 18px;
+  color: #f1eee3;
+  font: 400 48px/1.05 "Cormorant Garamond", Georgia, serif;
+  letter-spacing: 0.075em;
+  text-shadow: 0 5px 30px rgba(8, 18, 23, 0.3);
+}
+#loading .bird { width: min(340px, 70vw); margin-bottom: 22px; filter: drop-shadow(0 10px 22px rgba(10, 18, 20, 0.28)); }
+#loading .bird .feather, #loading .bird .beak, #loading .bird .seam { stroke: #e4dfc9; }
+#loading .bird .feather { fill: #1c292b; }
+#loading .bird .beak { stroke: #d8b18b; }
+#loading .loading-bar { --ink: #f1eee3; --mute: #c1c7b9; width: 300px; max-width: 78vw; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(241, 238, 227, 0.34); }
+#loading.ready .loading-bar { box-shadow: inset 0 0 0 1px rgba(221, 207, 160, 0.68); }
+#loading.ready #loading-status { color: #f2e7bf; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; }
+#loading.ready .loading-bar:hover .bar-fill { background: rgba(212, 187, 127, 0.22); }
+#loading.ready .loading-bar:hover #loading-status { color: #fff8e6; }
+#loading .keys { color: rgba(235, 236, 222, 0.72); font-size: 12px; letter-spacing: 0.025em; }
+#loading .foot { color: rgba(235, 236, 222, 0.7); font-size: 11px; letter-spacing: 0.025em; }
+#loading .byline { opacity: 0.78; }
+#loading .byline a { text-decoration-color: rgba(235, 236, 222, 0.45); }
+#loading .byline a:hover { color: #f2e7bf; }
+
+#settings { --ink: #e4e8de; --mute: #aeb9ae; --fill: #d8c895; --track: rgba(224, 231, 214, 0.12); }
+.pop-toggle {
+  border: 1px solid rgba(227, 229, 214, 0.14);
+  border-radius: 999px;
+  background: rgba(18, 28, 27, 0.62);
+  box-shadow: 0 4px 18px rgba(10, 18, 17, 0.16);
+}
+.pop-toggle:hover, .pop-toggle:focus-visible, .pop-toggle[aria-expanded="true"] { background: rgba(18, 28, 27, 0.88); }
+#settings-panel, #credits-panel {
+  border: 1px solid rgba(227, 229, 214, 0.12);
+  border-radius: 14px;
+  background: rgba(18, 28, 27, 0.83);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 55px rgba(7, 14, 13, 0.32);
+}
+.bar-wrap { border-radius: 999px; }
+.chips button { border-radius: 999px; }
+#mini-map-panel {
+  border-color: rgba(224, 214, 177, 0.28);
+  background: rgba(19, 31, 29, 0.58);
+  box-shadow: 0 8px 28px rgba(8, 16, 15, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+#fullscreen-toggle { border-radius: 50%; }
+#fly-together-btn {
+  border-color: rgba(216, 200, 149, 0.45);
+  background: rgba(24, 36, 32, 0.85);
+  color: #f1ead5;
+  box-shadow: 0 8px 26px rgba(8, 16, 15, 0.28);
+}
+@media (max-height: 650px) {
+  #loading { gap: 6px; }
+  #loading .bird { width: min(280px, 44vh); margin-bottom: 12px; }
+  #loading h1 { font-size: 40px; margin-bottom: 10px; }
+  #loading .foot { bottom: 12px; }
+}

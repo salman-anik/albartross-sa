@@ -30,10 +30,12 @@ export class CloudDeck {
     this.instances = [];
     this.lastMotion = -1;
     this.dummy = new THREE.Object3D();
-    this.material = new THREE.MeshBasicMaterial({
+    this.material = new THREE.MeshStandardMaterial({
       color: WHITE,
       transparent: true,
       opacity: 0.26,
+      roughness: 1,
+      metalness: 0,
       depthWrite: false,
       fog: true,
       side: THREE.DoubleSide,
@@ -101,6 +103,6 @@ export class CloudDeck {
     const twilight = 1 - Math.min(1, Math.abs(daylight - 0.5) * 2);
     this.material.color.copy(WHITE).lerp(SUNSET, twilight * 0.42);
     if (skyColor?.isColor) this.material.color.lerp(skyColor, 0.18 * (1 - daylight));
-    this.material.opacity = 0.22 + daylight * 0.12;
+    this.material.opacity = 0.34 + daylight * 0.16;
   }
 }

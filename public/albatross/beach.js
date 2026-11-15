@@ -21,9 +21,9 @@ import { hash } from "./statues.js";
 export const BEACH = {
   at: -3, // world units out from the grass's edge the line lies (negative = in: more beach)
   fade: 1.5, // world units the sand takes to blend into the grass, centred on the line: 0 = a crisp cut
-  sides: [14, 20], // how many straight sides each lobe's run of line has, drawn per lobe
-  uneven: 0.45, // how unevenly the corners are spaced round a lobe: 0 = a regular polygon, 1 = any side may be twice its neighbour
-  stagger: 0.06, // how far each side sits in or out from the rest, of the lobe's radius
+  sides: [20, 30], // more shoreline segments keep the coast from reading as a polygon
+  uneven: 0.3,
+  stagger: 0.035,
   wave: 0, // world units the line wanders in and out along the shore (0 keeps the sides straight)
   waveScale: 6, // world units along the shore between one wander and the next
   // The patty: inside the line the grass stands up off the sand, its top
@@ -35,20 +35,20 @@ export const BEACH = {
 // Paint on the grass, in the palette's splotch colour: pentagons, big and
 // small, each turned its own way, placed the way the sand's pebbles are
 export const SPLOTCH = {
-  ground: 0.9, // how solidly the pentagons lie on the grass: 0 = none, 1 = the colour flat
+  ground: 0.14, // subtle moss variation under the procedural grass grain
   dotSize: 1.8, // world units of grass each pentagon has to itself (was 1.1, then 2.5: too big; everything scales with it)
   dotSpan: [0.2, 0.5], // how big a pentagon is, point to centre, as a share of that: each draws its own from this range (0.5 fills its space)
-  dotCover: 0.3, // how many of those spaces hold a pentagon (0 = none, 1 = all)
+  dotCover: 0.14,
   // A second scatter of small ones, pebble-sized, among the big: the same
   // shapes, in cells of their own, in their own colour (palette.js splotch2)
   smallSize: 0.8, // world units of grass each small pentagon has to itself (the sand's pebbles have SAND.pebbleSize, 0.8)
-  smallCover: 0.15, // how many of those spaces hold one
+  smallCover: 0.1,
 };
 // The sand's markings, painted per pixel the way the heads' weathering is:
 // pebbles, small round dots in a grey of their own, fading out as the sand
 // goes under the water
 export const SAND = {
-  pebbles: 0.9, // how clearly the pebbles show: 0 = none, 1 = in their full grey
+  pebbles: 0.36,
   pebbleSize: 0.8, // world units of sand each pebble has to itself (the pebble is a third to two-thirds of that across)
   pebbleCover: 0.1, // how many of those spaces hold a pebble (0 = none, 1 = all)
   pebbleTone: [0.55, 1.2], // how dark or pale a pebble is, as a factor on the sand's colour: each draws its own from this range
@@ -224,11 +224,15 @@ float pentagonAt(vec2 g, float cover) {
     float pebble = dotAt(q / uPebbleSize, uPebbleCover, pebbleId);
     float tone = mix(uPebbleTone.x, uPebbleTone.y, pebbleId);
     sand = mix(sand, sand * tone, pebble * uPebbles * (1.0 - wet));
+    float sandGrain = rockNoise(q * 1.4) * 0.55 + rockNoise(q * 6.0) * 0.3 + rockNoise(q * 24.0) * 0.15;
+    sand *= 0.94 + 0.12 * sandGrain;
     // Pentagons of paint over the grass, in cells uDotSize across, and
     // small ones among them in cells uSmallSize across, in a colour of
     // their own (drawn over the big ones where they meet)
     vec3 grass = mix(diffuseColor.rgb, uSplotch, pentagonAt(q / uDotSize + 50.0, uDotCover) * uSplotchGround);
     grass = mix(grass, uSplotch2, pentagonAt(q / uSmallSize + 130.0, uSmallCover) * uSplotchGround);
+    float grassGrain = rockNoise(q * 0.12) * 0.42 + rockNoise(q * 0.8) * 0.36 + rockNoise(q * 5.0) * 0.22;
+    grass *= 0.9 + 0.2 * grassGrain;
     // Sand into grass over uFade either side of the line (never sharper than a pixel)
     float reach = max(0.5 * uFade, fwidth(vLine));
     vec3 c = mix(grass, sand, smoothstep(uBeachAt - reach, uBeachAt + reach, vLine));

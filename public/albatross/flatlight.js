@@ -29,8 +29,6 @@
 //   pool    how bright the warm pool on the ground round a lit lantern's
 //           foot is (poolTexture draws it: fading, or a flat disc, as
 //           `lamp` has it)
-// The shine is gone whatever the numbers: no specular from the key or the
-// sky.
 import { ShaderChunk, ShaderLib, CanvasTexture, MathUtils } from "three";
 
 export const FLAT_KEY = "flat-lab"; // where the scene lab keeps the look in localStorage
@@ -171,14 +169,4 @@ swap(
   "lights_physical_pars_fragment",
   "float dotNL = saturate( dot( geometryNormal, directLight.direction ) );",
   "float dotNL = flatBands( saturate( ( dot( geometryNormal, directLight.direction ) + FLAT_WRAP ) / ( 1.0 + FLAT_WRAP ) ) );",
-);
-// No shine, from the key or the sky
-swap("lights_physical_pars_fragment", "reflectedLight.directSpecular += irradiance * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );", "");
-swap("lights_physical_pars_fragment", "reflectedLight.indirectSpecular += radiance * singleScattering;", "");
-swap("lights_physical_pars_fragment", "reflectedLight.indirectSpecular += multiScattering * cosineWeightedIrradiance;", "");
-// The skylight's diffuse is no longer dimmed by the shine it would have spent
-swap(
-  "lights_physical_pars_fragment",
-  "vec3 diffuse = material.diffuseColor * ( 1.0 - max( max( totalScattering.r, totalScattering.g ), totalScattering.b ) );",
-  "vec3 diffuse = material.diffuseColor;",
 );
