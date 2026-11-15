@@ -5360,6 +5360,70 @@ await loading("finding the bird", 0.97); // a step of the bar, so it does not si
 const bird = buildAlbatross(BIRD);
 const { player, body } = bird; // player: its place and heading; body: its bank and pitch
 scene.add(player);
+const WING_BLUE = new THREE.Color(0x368dff);
+const COLOR_TRANSFORM_SECONDS = 5 * 60;
+let flightEffectTime = 0;
+const playerWingInks = [];
+player.traverse((obj) => {
+  if (!obj.isMesh || !obj.material) return;
+  const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+  for (const material of materials) {
+    if (!material.userData?.albatrossOuterWingInk || !material.userData.albatrossWingInk) continue;
+    playerWingInks.push({ material, ink: material.userData.albatrossWingInk, base: material.userData.albatrossWingInk.clone() });
+  }
+});
+const playerWingFx = [];
+{
+  const glowCanvas = document.createElement("canvas");
+  glowCanvas.width = glowCanvas.height = 64;
+  const glowCtx = glowCanvas.getContext("2d");
+  const glowGrad = glowCtx.createRadialGradient(32, 32, 2, 32, 32, 32);
+  glowGrad.addColorStop(0, "rgba(150, 205, 255, 0.45)");
+  glowGrad.addColorStop(0.4, "rgba(75, 145, 255, 0.18)");
+  glowGrad.addColorStop(1, "rgba(55, 120, 255, 0)");
+  glowCtx.fillStyle = glowGrad;
+  glowCtx.fillRect(0, 0, 64, 64);
+  const glowTexture = new THREE.CanvasTexture(glowCanvas);
+
+  const sparkleCanvas = document.createElement("canvas");
+  sparkleCanvas.width = sparkleCanvas.height = 24;
+  const sparkleCtx = sparkleCanvas.getContext("2d");
+  sparkleCtx.fillStyle = "rgba(255,255,255,0.95)";
+  sparkleCtx.beginPath();
+  sparkleCtx.moveTo(12, 0); sparkleCtx.quadraticCurveTo(14, 10, 24, 12);
+  sparkleCtx.quadraticCurveTo(14, 14, 12, 24); sparkleCtx.quadraticCurveTo(10, 14, 0, 12);
+  sparkleCtx.quadraticCurveTo(10, 10, 12, 0); sparkleCtx.fill();
+  const sparkleTexture = new THREE.CanvasTexture(sparkleCanvas);
+
+  for (const wing of bird.wings) {
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture, color: WING_BLUE, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, fog: false,
+    }));
+    glow.position.set(wing.side * BIRD.wing.outer * 0.55, 0.08, -BIRD.wing.sweep * 0.4 - 0.12);
+    glow.scale.set(1.5, 1.5, 1);
+    glow.renderOrder = 2;
+    wing.elbow.add(glow);
+
+    const sparkles = [];
+    for (let i = 0; i < 3; i++) {
+      const material = new THREE.SpriteMaterial({
+        map: sparkleTexture, color: WING_BLUE, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, fog: false,
+      });
+      const sprite = new THREE.Sprite(material);
+      const x = wing.side * BIRD.wing.outer * (0.3 + i * 0.17);
+      const y = 0.12 + (i % 2) * 0.16;
+      const z = -BIRD.wing.sweep * 0.32 + (i - 1) * 0.13;
+      sprite.position.set(x, y, z);
+      sprite.scale.setScalar(0.08);
+      sprite.renderOrder = 3;
+      wing.elbow.add(sprite);
+      sparkles.push({ sprite, material, x, y, z, phase: i / 3 + (wing.side < 0 ? 0.5 : 0) });
+    }
+    playerWingFx.push({ glow, sparkles, phase: wing.side < 0 ? Math.PI : 0 });
+  }
+}
 const partner = buildAlbatross({
   ...BIRD,
   colour: {
@@ -5370,42 +5434,50 @@ const partner = buildAlbatross({
 });
 const { player: partnerRoot, body: partnerBody } = partner;
 partnerRoot.scale.multiplyScalar(0.82);
+const companionMaterials = new Set();
+const companionWhite = new THREE.Color(0xffffff);
+const companionPink = new THREE.Color(0xff4f9d);
 partnerRoot.traverse((obj) => {
   if (obj.isMesh && obj.material) {
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     for (const m of mats) {
+      companionMaterials.add(m);
       if (m.color) m.color.setHex(0xffffff);
       if (m.emissive) {
-        m.emissive.setHex(0xffffff);
-        m.emissiveIntensity = 0.12;
+        m.emissive.setHex(0x000000);
+        m.emissiveIntensity = 0;
       }
     }
   }
 });
 const companionSparkles = [];
+let companionGlowSprite = null;
 {
   const gCanvas = document.createElement("canvas");
   gCanvas.width = gCanvas.height = 128;
   const gCtx = gCanvas.getContext("2d");
   const grad = gCtx.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, "rgba(255, 255, 255, 0.28)");
-  grad.addColorStop(0.35, "rgba(220, 242, 255, 0.09)");
-  grad.addColorStop(1, "rgba(220, 242, 255, 0)");
+  grad.addColorStop(0, "rgba(255, 255, 255, 0.24)");
+  grad.addColorStop(0.35, "rgba(235, 246, 255, 0.08)");
+  grad.addColorStop(1, "rgba(235, 246, 255, 0)");
   gCtx.fillStyle = grad;
   gCtx.fillRect(0, 0, 128, 128);
   const glowTex = new THREE.CanvasTexture(gCanvas);
-  const glowSprite = new THREE.Sprite(
+  companionGlowSprite = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: glowTex,
       color: 0xffffff,
       transparent: true,
       blending: THREE.AdditiveBlending,
+      depthTest: false,
       depthWrite: false,
       fog: false,
     }),
   );
-  glowSprite.scale.set(3.2, 3.2, 1);
-  partnerBody.add(glowSprite);
+  companionGlowSprite.scale.set(4.2, 4.2, 1);
+  companionGlowSprite.material.opacity = 0.12;
+  companionGlowSprite.renderOrder = 2;
+  partnerBody.add(companionGlowSprite);
 
   // A handful of tiny, low-cost sparkles drift up from her body and fade out.
   const sparkCanvas = document.createElement("canvas");
@@ -5417,10 +5489,10 @@ const companionSparkles = [];
   sparkCtx.quadraticCurveTo(18, 18, 16, 31); sparkCtx.quadraticCurveTo(14, 18, 1, 16);
   sparkCtx.quadraticCurveTo(14, 14, 16, 1); sparkCtx.fill();
   const sparkTexture = new THREE.CanvasTexture(sparkCanvas);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     const material = new THREE.SpriteMaterial({
       map: sparkTexture,
-      color: 0xffa6d4,
+      color: 0xffffff,
       transparent: true,
       opacity: 0,
       blending: THREE.AdditiveBlending,
@@ -5428,25 +5500,32 @@ const companionSparkles = [];
       fog: false,
     });
     const sprite = new THREE.Sprite(material);
-    const angle = (i / 5) * Math.PI * 2;
+    const angle = (i / 8) * Math.PI * 2;
     const x = Math.cos(angle) * 0.42;
     const y = 0.18 + (i % 2) * 0.18;
     const z = Math.sin(angle) * 0.32;
     sprite.position.set(x, y, z);
     sprite.scale.setScalar(0.13);
     partnerBody.add(sprite);
-    companionSparkles.push({ sprite, x, y, z, phase: i / 5, material });
+    companionSparkles.push({ sprite, x, y, z, phase: i / 8, material });
   }
 }
-partnerRoot.position.set(player.position.x + 38, player.position.y + 8, player.position.z - 42);
+partnerRoot.position.set(player.position.x + 24, player.position.y + 8, player.position.z - 22);
 partnerRoot.visible = true;
 scene.add(partnerRoot);
+const COMPANION_ORBIT_SPEED = 1.2;
+const COMPANION_ORBIT_TURNS = 2;
+const COMPANION_ORBIT_DURATION = (Math.PI * 2 * COMPANION_ORBIT_TURNS) / COMPANION_ORBIT_SPEED;
+const COMPANION_FOLLOW_DURATION = 60;
 const partnerState = {
   state: "roam",
-  side: 1,
-  lateral: 3.5,
-  fore: 1.5,
-  dy: 0.6,
+  bloom: 0,
+  orbitDirection: 1,
+  orbitPhase: 0,
+  formationSide: 1,
+  flyStart: 0,
+  roamMode: "near",
+  roamModeTimer: 48 + Math.random() * 18,
   yaw: Math.PI * 0.7,
   pitch: 0,
   goalX: player.position.x + 55,
@@ -5456,13 +5535,17 @@ const partnerState = {
 };
 const flyTogetherBtn = document.getElementById("fly-together-btn");
 function startFlyTogether(tNow) {
-  const portrait = innerWidth < innerHeight || innerWidth < 700;
-  partnerState.side = Math.random() < 0.5 ? 1 : -1;
-  partnerState.lateral = portrait ? 2.1 + Math.random() * 1.1 : 3.4 + Math.random() * 1.8;
-  partnerState.fore = portrait ? 1.8 + Math.random() * 2.0 : 0.4 + Math.random() * 2.0;
-  partnerState.dy = -0.2 + Math.random() * 1.3;
+  const dx = partnerRoot.position.x - player.position.x;
+  const dz = partnerRoot.position.z - player.position.z;
+  partnerState.orbitPhase = Math.atan2(dz, dx);
+  const lateral = dx * Math.cos(heading) - dz * Math.sin(heading);
+  partnerState.formationSide = lateral >= 0 ? 1 : -1;
+  // Keep the orbit close and visible. The follower eases her onto this ring
+  // from her current position, so she never teleports into formation.
+  partnerState.orbitDirection = Math.random() < 0.5 ? 1 : -1;
+  partnerState.flyStart = tNow;
   partnerState.state = "fly";
-  partnerState.until = tNow + 30;
+  partnerState.until = tNow + COMPANION_ORBIT_DURATION + COMPANION_FOLLOW_DURATION;
   if (flyTogetherBtn) flyTogetherBtn.hidden = true;
 }
 flyTogetherBtn?.addEventListener("click", () => {
@@ -5701,16 +5784,61 @@ renderer.setAnimationLoop(() => {
   // Her companion albatross roams nearby and joins only when invited.
   {
     const tNow = clock.elapsedTime;
-    for (const sparkle of companionSparkles) {
-      const phase = (tNow * 0.65 + sparkle.phase) % 1;
+    if (started) flightEffectTime += delta;
+    const wingBloom = THREE.MathUtils.smoothstep(flightEffectTime, 0, COLOR_TRANSFORM_SECONDS);
+    for (const { material, ink, base } of playerWingInks) {
+      ink.copy(base).lerp(WING_BLUE, wingBloom);
+      if (material.emissive) {
+        material.emissive.copy(WING_BLUE);
+        material.emissiveIntensity = wingBloom * 0.34;
+      }
+    }
+    for (const fx of playerWingFx) {
+      fx.glow.material.opacity = wingBloom * 0.62;
+      const glowSize = 1.5 + wingBloom * 1.2;
+      fx.glow.scale.set(glowSize, glowSize, 1);
+      for (let i = 0; i < fx.sparkles.length; i++) {
+        const sparkle = fx.sparkles[i];
+        const phase = (tNow * 0.7 + sparkle.phase) % 1;
+        const fade = Math.sin(Math.PI * phase) ** 2;
+        const reveal = THREE.MathUtils.smoothstep(wingBloom, i * 0.22, i * 0.22 + 0.42);
+        sparkle.material.opacity = fade * wingBloom * reveal * 0.9;
+        sparkle.sprite.position.set(
+          sparkle.x + Math.sin(tNow * 2 + sparkle.phase * 5) * 0.05,
+          sparkle.y + phase * (0.18 + wingBloom * 0.18),
+          sparkle.z + Math.cos(tNow * 1.8 + sparkle.phase * 5) * 0.04,
+        );
+        sparkle.sprite.scale.setScalar(0.06 + fade * (0.05 + wingBloom * 0.07));
+      }
+    }
+    partnerState.bloom = wingBloom;
+    const bloom = wingBloom;
+    for (const material of companionMaterials) {
+      if (material.color) material.color.copy(companionWhite).lerp(companionPink, bloom);
+      if (material.emissive) {
+        material.emissive.copy(companionPink);
+        material.emissiveIntensity = bloom * 0.42;
+      }
+    }
+    if (companionGlowSprite) {
+      companionGlowSprite.material.color.copy(companionWhite).lerp(companionPink, bloom);
+      companionGlowSprite.material.opacity = 0.22 + bloom * 0.72;
+      const glowScale = 4.6 + bloom * 3.0;
+      companionGlowSprite.scale.set(glowScale, glowScale, 1);
+    }
+    for (let i = 0; i < companionSparkles.length; i++) {
+      const sparkle = companionSparkles[i];
+      const phase = (tNow * (0.65 + bloom * 0.5) + sparkle.phase) % 1;
       const fade = Math.sin(Math.PI * phase) ** 2;
-      sparkle.material.opacity = fade * 0.72;
+      const reveal = THREE.MathUtils.smoothstep(bloom, (i / companionSparkles.length) * 0.78, (i / companionSparkles.length) * 0.78 + 0.22);
+      sparkle.material.color.copy(companionWhite).lerp(companionPink, bloom);
+      sparkle.material.opacity = fade * bloom * reveal;
       sparkle.sprite.position.set(
         sparkle.x + Math.sin(tNow * 2.4 + sparkle.phase * 8) * 0.06,
-        sparkle.y + phase * 0.28,
+        sparkle.y + phase * (0.28 + bloom * 0.24),
         sparkle.z + Math.cos(tNow * 2.1 + sparkle.phase * 8) * 0.05,
       );
-      sparkle.sprite.scale.setScalar(0.09 + fade * 0.07);
+      sparkle.sprite.scale.setScalar(0.09 + fade * (0.07 + bloom * 0.09));
     }
     const dxP = partnerRoot.position.x - player.position.x;
     const dyP = partnerRoot.position.y - player.position.y;
@@ -5719,28 +5847,58 @@ renderer.setAnimationLoop(() => {
 
     if (partnerState.state === "roam") {
       partnerState.goalTimer -= delta;
+        partnerState.roamModeTimer -= delta;
+        if (partnerState.roamMode === "near" && distToPlayer > 500) {
+          partnerState.roamMode = "return";
+          partnerState.roamModeTimer = 0;
+          partnerState.goalTimer = 0;
+        } else if (partnerState.roamMode === "near" && partnerState.roamModeTimer <= 0) {
+          partnerState.roamMode = "far";
+          partnerState.roamModeTimer = 42 + Math.random() * 18;
+          partnerState.goalTimer = 0;
+        } else if (partnerState.roamMode === "far" && partnerState.roamModeTimer <= 0) {
+          partnerState.roamMode = "return";
+          partnerState.roamModeTimer = 0;
+          partnerState.goalTimer = 0;
+        } else if (partnerState.roamMode === "return" && distToPlayer < 360) {
+          partnerState.roamMode = "near";
+          partnerState.roamModeTimer = 55 + Math.random() * 25;
+          partnerState.goalTimer = 0;
+        }
         const distToGoal = Math.hypot(partnerState.goalX - partnerRoot.position.x, partnerState.goalZ - partnerRoot.position.z);
-        const userFollowing = distToPlayer < 48 && Math.cos(wrapAngle(heading - partnerState.yaw)) > 0.45;
+        const userFollowing = partnerState.roamMode !== "return" && distToPlayer < 48 && Math.cos(wrapAngle(heading - partnerState.yaw)) > 0.45;
         if (userFollowing) {
-          // User is following the companion: keep leading further ahead to explore together
-          if (partnerState.goalTimer <= 0 || distToGoal < 45) {
+          // When the player follows, lead by a short, readable distance.
+          if (partnerState.goalTimer <= 0 || distToGoal < 8) {
             const leadAngle = partnerState.yaw + (Math.random() - 0.5) * 0.65;
-            const leadDist = 140 + Math.random() * 90;
+            const leadDist = 18 + Math.random() * 10;
             partnerState.goalX = partnerRoot.position.x + Math.sin(leadAngle) * leadDist;
             partnerState.goalZ = partnerRoot.position.z + Math.cos(leadAngle) * leadDist;
             const groundGoal = Math.max(getHeight(partnerState.goalX, partnerState.goalZ), WATER_Y);
             partnerState.goalY = groundGoal + 16 + Math.random() * 26;
-            partnerState.goalTimer = 7 + Math.random() * 6;
+            partnerState.goalTimer = 5 + Math.random() * 4;
           }
-        } else if (partnerState.goalTimer <= 0 || distToGoal < 14 || distToPlayer > 125) {
-          // Roaming on its own: stay within reach if the player isn't following
-          const a = Math.random() * Math.PI * 2;
-          const r = distToPlayer > 125 ? 45 + Math.random() * 40 : 40 + Math.random() * 65;
+        } else if (partnerState.goalTimer <= 0 || distToGoal < 18) {
+          // Explore across the minimap, make an occasional trip beyond it,
+          // then choose a closer waypoint and fly back without teleporting.
+          const currentRadius = Math.hypot(dxP, dzP);
+          const a = partnerState.roamMode === "return"
+            ? Math.atan2(dxP, dzP)
+            : Math.random() * Math.PI * 2;
+          const r = partnerState.roamMode === "far"
+            ? 560 + Math.random() * 180
+            : partnerState.roamMode === "return"
+              ? Math.min(currentRadius - 35, 230 + Math.random() * 90)
+              : 170 + Math.random() * 270;
           partnerState.goalX = player.position.x + Math.sin(a) * r;
           partnerState.goalZ = player.position.z + Math.cos(a) * r;
           const groundGoal = Math.max(getHeight(partnerState.goalX, partnerState.goalZ), WATER_Y);
           partnerState.goalY = groundGoal + 14 + Math.random() * 28;
-          partnerState.goalTimer = 6 + Math.random() * 7;
+          partnerState.goalTimer = partnerState.roamMode === "return"
+            ? 15 + Math.random() * 8
+            : partnerState.roamMode === "far"
+              ? 40 + Math.random() * 14
+              : 34 + Math.random() * 16;
         }
         const wantYaw = Math.atan2(partnerState.goalX - partnerRoot.position.x, partnerState.goalZ - partnerRoot.position.z);
         const turnDelta = wrapAngle(wantYaw - partnerState.yaw);
@@ -5748,7 +5906,7 @@ renderer.setAnimationLoop(() => {
         const wantPitch = THREE.MathUtils.clamp((partnerState.goalY - partnerRoot.position.y) * 0.04, -0.35, 0.45);
         partnerState.pitch += (wantPitch - partnerState.pitch) * Math.min(1, delta * 2.0);
         // Let the player bird keep a small speed lead while accelerating.
-        const pSpeed = userFollowing ? Math.max(speed * 0.9, 12) : 13.5;
+        const pSpeed = userFollowing ? Math.max(speed * 0.9, 12) : partnerState.roamMode === "return" ? 17 : 13.5;
         partnerRoot.position.x += Math.sin(partnerState.yaw) * Math.cos(partnerState.pitch) * pSpeed * delta;
         partnerRoot.position.y += Math.sin(partnerState.pitch) * pSpeed * delta;
         partnerRoot.position.z += Math.cos(partnerState.yaw) * Math.cos(partnerState.pitch) * pSpeed * delta;
@@ -5765,24 +5923,49 @@ renderer.setAnimationLoop(() => {
         partnerState.state = "roam";
         partnerState.goalTimer = 0;
       } else {
-        const tx = player.position.x + Math.cos(heading) * (partnerState.side * partnerState.lateral) + Math.sin(heading) * partnerState.fore;
-        const tz = player.position.z - Math.sin(heading) * (partnerState.side * partnerState.lateral) + Math.cos(heading) * partnerState.fore;
-        const ty = player.position.y + partnerState.dy + Math.sin(tNow * 1.4) * 0.35;
-        const followEase = boostNow > 1.05 ? 2.8 : 3.8;
+        const elapsed = tNow - partnerState.flyStart;
+        const orbitElapsed = Math.min(elapsed, COMPANION_ORBIT_DURATION);
+        const orbit = partnerState.orbitPhase + orbitElapsed * COMPANION_ORBIT_SPEED * partnerState.orbitDirection;
+        const radius = 13 + Math.sin(orbitElapsed * 1.8) * 0.8;
+        const circleX = player.position.x + Math.cos(orbit) * radius;
+        const circleZ = player.position.z + Math.sin(orbit) * radius;
+        const circleFloor = Math.max(getHeight(circleX, circleZ), WATER_Y) + 6;
+        const circleY = Math.max(player.position.y + 4 + Math.sin(orbit * 2) * 1.6, circleFloor);
+
+        // Two full loops, then ease into a steady side-by-side formation.
+        const formationLateral = partnerState.formationSide * 4.3;
+        const formationFore = 1.2;
+        const formationX = player.position.x + Math.cos(heading) * formationLateral + Math.sin(heading) * formationFore;
+        const formationZ = player.position.z - Math.sin(heading) * formationLateral + Math.cos(heading) * formationFore;
+        const formationFloor = Math.max(getHeight(formationX, formationZ), WATER_Y) + 4;
+        const formationY = Math.max(player.position.y + 1.2 + Math.sin(elapsed * 1.6) * 0.45, formationFloor);
+        const settleTogether = THREE.MathUtils.smoothstep(elapsed, COMPANION_ORBIT_DURATION, COMPANION_ORBIT_DURATION + 2.5);
+        const tx = THREE.MathUtils.lerp(circleX, formationX, settleTogether);
+        const ty = THREE.MathUtils.lerp(circleY, formationY, settleTogether);
+        const tz = THREE.MathUtils.lerp(circleZ, formationZ, settleTogether);
+        const followEase = boostNow > 1.05 ? 6 : 9;
         const lerpK = 1 - Math.exp(-followEase * delta);
         partnerRoot.position.x += (tx - partnerRoot.position.x) * lerpK;
         partnerRoot.position.y += (ty - partnerRoot.position.y) * lerpK;
         partnerRoot.position.z += (tz - partnerRoot.position.z) * lerpK;
-        partnerState.yaw += wrapAngle(heading - partnerState.yaw) * Math.min(1, delta * 5);
+        const orbitYaw = -orbit + (partnerState.orbitDirection < 0 ? Math.PI : 0);
+        const wantYaw = orbitYaw + wrapAngle(heading - orbitYaw) * settleTogether;
+        partnerState.yaw += wrapAngle(wantYaw - partnerState.yaw) * Math.min(1, delta * 5);
         partnerRoot.rotation.y = partnerState.yaw;
-        partnerBody.rotation.z = roll;
-        partnerBody.rotation.x = -pitchA * 0.7;
-        partner.beat(delta, pitchA);
+        const orbitDance = 1 - settleTogether;
+        const dance = Math.sin(elapsed * 3.2);
+        partnerBody.rotation.z = THREE.MathUtils.clamp(
+          roll * settleTogether + (Math.sin(orbit) * 0.42 + dance * 0.2) * orbitDance + Math.sin(elapsed * 1.4) * 0.06 * settleTogether,
+          -0.7,
+          0.7,
+        );
+        partnerBody.rotation.x = -pitchA * 0.7 + Math.sin(orbit * 2) * 0.18 * orbitDance + Math.sin(elapsed * 1.6) * 0.08 * settleTogether;
+        partner.beat(delta, 0.55 * orbitDance + pitchA * settleTogether + Math.max(0, dance) * 0.25 * orbitDance);
       }
     }
 
     if (flyTogetherBtn) {
-      const showBtn = started && partnerState.state === "roam" && distToPlayer < 48;
+      const showBtn = started && partnerState.state === "roam" && distToPlayer < 80;
       if (flyTogetherBtn.hidden === showBtn) flyTogetherBtn.hidden = !showBtn;
     }
   }

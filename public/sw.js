@@ -1,4 +1,4 @@
-const CACHE_NAME = "albartross-offline-v1";
+const CACHE_NAME = "albartross-offline-v10";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",

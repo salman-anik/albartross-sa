@@ -388,6 +388,9 @@ float washDot(float d) { return 1.0 - smoothstep(1.0 - uSoft, 1.0 + 0.3 * uSoft,
 // mid-chord and wanders.
 function stippled(material, A, offset) {
   const S = A.stipple;
+  const inkColor = new THREE.Color(A.colour.dark);
+  material.userData.albatrossWingInk = inkColor;
+  material.userData.albatrossOuterWingInk = offset > 0;
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, {
       uOffset: { value: offset },
@@ -403,7 +406,7 @@ function stippled(material, A, offset) {
       uBend: { value: S.bend },
       uWarp: { value: S.warp },
       uFade: { value: S.fade },
-      uInk: { value: new THREE.Color(A.colour.dark) },
+      uInk: { value: inkColor },
     });
     shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vLocal;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvLocal = position;");
     shader.fragmentShader = shader.fragmentShader

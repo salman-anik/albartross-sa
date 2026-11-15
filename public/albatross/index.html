@@ -253,58 +253,11 @@
       </svg>
     </button>
     <button id="fly-together-btn" class="pop-toggle" type="button" hidden>Fly Together</button>
-    <!-- The settings: one small button at the top right; the day, the
-         music, the weather and the credits only when it is opened -->
+    <!-- Settings and credits; weather and daylight continue in the world. -->
     <div id="settings">
       <div class="settings-buttons">
-        <button id="settings-toggle" class="pop-toggle" aria-expanded="false" aria-controls="settings-panel" title="the weather, the time of day, and the rest"><span id="wx-mini" aria-hidden="true">☀</span><b id="wx-mini-name">clear</b><i id="wx-mini-time"></i></button>
         <button id="credits-toggle" class="pop-toggle" aria-label="Settings" aria-expanded="false" aria-controls="credits-panel" title="Settings"
           ><span class="cd" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M10.3 2.5h3.4l.5 2.6a7.6 7.6 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a7.7 7.7 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.6 7.6 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.6 7.6 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a7.7 7.7 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.6 7.6 0 0 1 1.9-1.1z" /><circle cx="12" cy="12" r="3" /></svg></span></button>
-      </div>
-      <div id="settings-panel" hidden>
-        <div class="panel-head">
-          <h2 class="settings-title">Forecast</h2>
-        </div>
-        <div class="setting weather-now">
-          <!-- As a weather app has it, in a box: the weather now on the left
-               (its icon, its name, how long is left of it), a line, and what
-               comes next on the right (its icon, its name, how soon) -->
-          <div class="wx">
-            <div class="wx-col">
-              <span class="wx-label">Current</span>
-              <div id="wx-icon" class="wx-icon" aria-hidden="true"></div>
-              <div class="wx-line"><b id="weather-out"></b><span class="wx-dot">·</span><span id="wx-left"></span></div>
-            </div>
-            <div class="wx-divider" aria-hidden="true"></div>
-            <div class="wx-col wx-col-next">
-              <span id="wx-next-label" class="wx-label">Next</span>
-              <div id="wx-next-icon" class="wx-icon" aria-hidden="true"></div>
-              <div class="wx-line"><b id="wx-next-name"></b><span class="wx-dot">·</span><span id="wx-next-when"></span></div>
-            </div>
-          </div>
-        </div>
-        <div class="presets">
-          <span class="wx-label">Presets</span>
-          <div id="weather-chips" class="chips" aria-label="weather presets"></div>
-        </div>
-        <!-- Each slider a bar with its name and what it is set to inside it,
-             on the left and the right, over a soft fill (main.field.js
-             paintSettings); the real slider lies over it, unseen -->
-        <div id="daynight" class="setting">
-          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">time of day</span><output id="daylight-out" class="bar-value"></output><input id="daylight" class="bar" type="range" min="0" max="1" step="0.01" value="0" aria-label="time of day" /></div>
-        </div>
-        <div id="rain" class="setting">
-          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">rain</span><output id="rain-out" class="bar-value"></output><input id="rain-level" class="bar" type="range" min="0" max="1" step="0.01" value="0" aria-label="rain" /></div>
-        </div>
-        <div id="snow" class="setting">
-          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">snow</span><output id="snow-out" class="bar-value"></output><input id="snow-level" class="bar" type="range" min="0" max="1" step="0.01" value="0" aria-label="snow" /></div>
-        </div>
-        <div id="wind" class="setting">
-          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">wind</span><output id="wind-out" class="bar-value"></output><input id="wind-level" class="bar" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="wind" /></div>
-        </div>
-        <div id="wind-way" class="setting" title="which way the wind blows (the arrow: as seen from here)">
-          <div class="bar-wrap"><div class="bar-fill"></div><span class="bar-name">direction</span><output id="dir-out" class="bar-value"><span id="dir-num"></span><b id="wind-arrow" aria-hidden="true">↑</b></output><input id="wind-dir" class="bar" type="range" min="0" max="359" step="1" value="60" aria-label="wind direction" /></div>
-        </div>
       </div>
       <div id="credits-panel" class="popover" hidden>
         <div class="setting-switches">

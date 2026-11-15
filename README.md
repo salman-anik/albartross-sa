@@ -1,6 +1,6 @@
 # Albartross SA
 
-Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatross over a procedurally generated archipelago, explore its islands and weather, and fly near a glowing companion bird.
+Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatross over a procedurally generated archipelago, explore its islands and changing weather, and fly with an autonomous companion bird.
 
 **Live demo:** [albartross-sa.vercel.app](https://albartross-sa.vercel.app)
 
@@ -10,10 +10,11 @@ Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatr
 - **Living archipelago:** generated islands, forests, flower meadows, mountain peaks, rivers, waterfalls, and changing coastlines.
 - **Sky and weather:** a day and night cycle, clouds, sun, moon, stars, rain, snow, wind, and selectable weather presets.
 - **Wildlife and scenery:** bird flocks, land animals, and animated stone heads and figures.
-- **Companion bird:** a smaller, fully white albatross with a soft glow and pink sparkles that fade as they drift from her body. Her position appears on the mini map. Use **Fly Together** when it appears, or follow her through the world.
+- **Companion bird:** a smaller albatross that explores around the mini map, sometimes flies farther out, and eventually returns naturally. Her position appears on the map, and you can follow her manually. **Fly Together** makes her circle the player twice, then fly beside the player for one minute.
+- **Flight color changes:** over five minutes of flight, the player's dark wing tips gradually turn blue with glow and sparkles. The companion changes from white to pink on the same timing, with her glow and sparkles building gradually too.
 - **Rotating mini map:** shows nearby islands, rivers, waterfalls, the player, and the companion.
 - **Sound:** a looping soundtrack and environmental effects, with separate music and SFX switches and an **M** mute shortcut.
-- **Display settings:** choose Low, Medium, High, or Ultra graphics; optional low battery mode can lower resolution when frames slow, but never raises it above the selected preset. Fullscreen is available from the game screen.
+- **Display settings:** choose Low, Medium, High, or Ultra graphics; optional low battery mode can lower resolution when frames slow, but never raises it above the selected preset. Music and SFX remain separate settings. Weather and daylight change automatically in the world. Fullscreen is available from the game screen.
 - **Additional views:** use the in-game tabs to open the Field, Heads, Pillars, Obelisks, Trees, Albatross, and Scene pages.
 - **Touch support:** swipe to steer and climb, and press and hold to boost.
 - **Installable and offline-ready:** after four minutes of mobile flight, an install option appears. The browser menu can install the same app at any time. The service worker saves the app shell and game resources as they load, so after the first online play the installed game can launch without a connection.
@@ -33,7 +34,7 @@ Albartross SA is a browser-based 3D flight and exploration game. Pilot an albatr
 | **Touch and hold** | Boost |
 | **M** | Mute or unmute audio |
 
-The bird keeps moving forward while flying. **Fly Together** is a manual companion action; she does not join automatically on a timer. Open **Settings** to view the weather forecast and presets, adjust time of day and weather, change graphics quality, and toggle music or sound effects.
+The bird keeps moving forward while flying. **Fly Together** is a manual companion action; she does not join automatically on a timer. Open **Settings** to change graphics quality and toggle music or sound effects. Weather and time of day continue changing automatically during flight.
 
 On iPhone or iPad, use **Share → Add to Home Screen** to install. On Android, use **Install app** in the browser menu or the in-game install option after four minutes of flight.
 
