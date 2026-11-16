@@ -1,4 +1,4 @@
-const CACHE_NAME = "albartross-offline-v15";
+const CACHE_NAME = "albartross-offline-v16";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
@@ -7,6 +7,41 @@ const APP_SHELL = [
   "/albatross/style.css",
   "/albatross/fonts/google.css",
   "/albatross/favicon.svg",
+  "/albatross/albatross.html",
+  "/albatross/heads.html",
+  "/albatross/pillars.html",
+  "/albatross/obelisks.html",
+  "/albatross/trees.html",
+  "/albatross/scene.html",
+  "/albatross/main.field.js",
+  "/albatross/albatross.js",
+  "/albatross/beach.js",
+  "/albatross/clouds.js",
+  "/albatross/daylight.js",
+  "/albatross/flatlight.js",
+  "/albatross/flowers.js",
+  "/albatross/hands.js",
+  "/albatross/heads.js",
+  "/albatross/palette.js",
+  "/albatross/scenery.js",
+  "/albatross/sounds.js",
+  "/albatross/statues.js",
+  "/albatross/wildlife.js",
+  "/albatross/worldmap.js",
+  "/albatross/vendor/three/build/three.module.js",
+  "/albatross/vendor/three/examples/jsm/controls/OrbitControls.js",
+  "/albatross/vendor/three/examples/jsm/geometries/ConvexGeometry.js",
+  "/albatross/vendor/three/examples/jsm/math/ConvexHull.js",
+  "/albatross/vendor/three/examples/jsm/utils/BufferGeometryUtils.js",
+  ...["font-1.ttf", "font-2.ttf", "font-3.ttf", "font-4.ttf", "font-5.ttf"].map((file) => `/albatross/fonts/${file}`),
+  ...[
+    "1_1_violin.ogg.mp3", "2_1_violin.ogg.mp3", "2_lamp-1.mp3", "3_1_violin.ogg.mp3", "3_lamp-2.mp3",
+    "4_1_violin.ogg.mp3", "4_lamp-3.mp3", "ambient-ocean.mp3", "bgm.mp3", "chimes.mp3", "ping-1.mp3",
+    "rain.mp3", "rumble-1.mp3", "rumble-2.mp3", "splash-2-2.mp3", "splash-2.mp3", "splash-3.mp3",
+    "splash.mp3", "stone-scrape-01.mp3", "stone-scrape-02.mp3", "stone-scrape-03.mp3", "stone-scrape-04.mp3",
+    "stone-scrape-05.mp3", "surf-2-2.mp3", "surf-3-2.mp3", "surf-3.mp3", "surf.mp3", "thunder.mp3",
+    "wind-mid.mp3", "wind-soft.mp3", "wind-strong.mp3",
+  ].map((file) => `/albatross/sounds/${file}`),
 ];
 
 async function cacheUrl(cache, url) {

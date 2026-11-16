@@ -6,6 +6,8 @@ export default function HomePage() {
   const host = useRef(null);
   const deferredInstall = useRef(null);
   const playedMobileSeconds = useRef(0);
+  const installPromptTimer = useRef(null);
+  const installPromptShown = useRef(false);
   const [loadError, setLoadError] = useState("");
   const [installAvailable, setInstallAvailable] = useState(false);
   const [installMessage, setInstallMessage] = useState("");
@@ -28,13 +30,18 @@ export default function HomePage() {
     const onAppInstalled = () => {
       deferredInstall.current = null;
       setInstallAvailable(false);
+      clearTimeout(installPromptTimer.current);
       setInstallMessage("Albartross SA is installed and ready for offline play.");
       try { localStorage.setItem("albartross-installed", "1"); } catch {}
     };
     const playTimer = setInterval(() => {
       if (!flightStarted || !isMobile() || document.visibilityState !== "visible" || isInstalled() || wasInstalled()) return;
       playedMobileSeconds.current += 1;
-      if (playedMobileSeconds.current >= 240) setInstallAvailable(true);
+      if (playedMobileSeconds.current >= 240 && !installPromptShown.current) {
+        installPromptShown.current = true;
+        setInstallAvailable(true);
+        installPromptTimer.current = setTimeout(() => setInstallAvailable(false), 8000);
+      }
     }, 1000);
     window.addEventListener("albatross:flight-start", onFlightStart);
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
@@ -87,6 +94,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
       clearInterval(playTimer);
+      clearTimeout(installPromptTimer.current);
       window.removeEventListener("albatross:flight-start", onFlightStart);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onAppInstalled);
